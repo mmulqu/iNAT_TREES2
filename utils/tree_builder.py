@@ -8,6 +8,7 @@ class TreeBuilder:
     @staticmethod
     def create_tree_structure(hierarchy: Dict) -> Tuple[Dict, Dict]:
         """Convert hierarchy to a format suitable for plotting."""
+        print("Initial hierarchy:", hierarchy)  # Debug print
         nodes = {}
         edges = []
         node_counter = 0
@@ -16,16 +17,15 @@ class TreeBuilder:
             nonlocal node_counter
             current_id = node_counter
             node_counter += 1
+            
+            print(f"Current node: {node}")  # Debug print
 
-            # Get the taxon ID from the first child if this is not a leaf node
-            taxon_id = list(node["children"].keys())[0] if node["children"] else None
-
-            # Store node information with taxon ID
+            # Store node information directly from the node
             nodes[current_id] = {
-                "name": node.get("name", ""),
+                "name": node.get("name", ""),  # This should contain the actual name
                 "common_name": node.get("common_name", ""),
                 "rank": node.get("rank", ""),
-                "taxon_id": taxon_id
+                "taxon_id": next(iter(node["children"])) if node["children"] else None
             }
 
             # Add edge from parent if exists
