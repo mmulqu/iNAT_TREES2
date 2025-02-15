@@ -1,0 +1,88 @@
+The issue is likely that the API isn’t always returning higher‐taxa names in the fields we expect (for example, the API response may not include a nonempty "phylum_name" even though the observation’s taxon has an ancestor with rank "phylum"). In our code we’re using
+
+python
+Copy
+"name": row[f"taxon_{rank}"] if rank != "species" else row["name"]
+to supply the hover text. For a phylum node (like Arthropoda), if row["taxon_phylum"] is empty, nothing shows up when you hover.
+
+One way to fix this is to use the detailed information in the taxon’s "ancestors" (if available) instead of relying solely on fields like "phylum_name". For example, you can extract the name for each rank from the "ancestors" list and fall back to the original field if needed.
+
+Below is one approach: modify your data processing so that higher taxa nodes get their proper name even if "taxon_phylum" (or similar) is missing.
+
+Step 1. Update Data Processing
+In your DataProcessor.process_observations method, add a helper function to extract the ancestor’s name by rank. (The API usually returns an "ancestors" list with full objects.)
+
+python
+Copy
+@staticmethod
+def get_ancestor_name(ancestors: List[Dict], rank: str) -> str:
+    for ancestor in ancestors:
+        if ancestor.get("rank") == rank:
+            return ancestor.get("name", "")
+    return ""
+Then update the observation processing code. For each observation, instead of relying only on fields like "kingdom_name", use the "ancestors" list if available:
+
+python
+Copy
+@staticmethod
+def process_observations(observations: List[Dict], taxonomic_group: Optional[str] = None) -> pd.DataFrame:
+    """Process raw observations into a structured DataFrame."""
+    processed_data = []
+
+    for obs in observations:
+        try:
+            if not obs.get("taxon") or not obs.get("id"):
+                continue
+
+            taxon = obs["taxon"]
+            ancestors = taxon.get("ancestors", [])
+            # Fallback: if ancestors are not provided, try using ancestor_ids (but these are just IDs)
+            if not isinstance(ancestors, list):
+                ancestors = []
+
+            processed_data.append({
+                "observation_id": obs["id"],
+                "taxon_id": taxon["id"],
+                "name": taxon["name"],
+                "rank": taxon["rank"],
+                # For these, try to use the API-provided names, falling back to our ancestor lookup
+                "kingdom": taxon.get("kingdom_name") or DataProcessor.get_ancestor_name(ancestors, "kingdom"),
+                "phylum": taxon.get("phylum_name") or DataProcessor.get_ancestor_name(ancestors, "phylum"),
+                "class": taxon.get("class_name") or DataProcessor.get_ancestor_name(ancestors, "class"),
+                "order": taxon.get("order_name") or DataProcessor.get_ancestor_name(ancestors, "order"),
+                "family": taxon.get("family_name") or DataProcessor.get_ancestor_name(ancestors, "family"),
+                "genus": taxon.get("genus_name") or DataProcessor.get_ancestor_name(ancestors, "genus"),
+                "species": taxon["id"],  # use the taxon id as species identifier
+                "common_name": taxon.get("preferred_common_name", ""),
+                "observed_on": obs.get("observed_on"),
+                "photo_url": obs.get("photos", [{}])[0].get("url", ""),
+                # These extra fields are used for hover text in the tree builder
+                "taxon_kingdom": taxon.get("kingdom_name") or DataProcessor.get_ancestor_name(ancestors, "kingdom"),
+                "taxon_phylum": taxon.get("phylum_name") or DataProcessor.get_ancestor_name(ancestors, "phylum"),
+                "taxon_class": taxon.get("class_name") or DataProcessor.get_ancestor_name(ancestors, "class"),
+                "taxon_order": taxon.get("order_name") or DataProcessor.get_ancestor_name(ancestors, "order"),
+                "taxon_family": taxon.get("family_name") or DataProcessor.get_ancestor_name(ancestors, "family"),
+                "taxon_genus": taxon.get("genus_name") or DataProcessor.get_ancestor_name(ancestors, "genus")
+            })
+
+        except Exception as e:
+            print(f"Error processing observation {obs.get('id')}: {str(e)}")
+            continue
+
+    df = pd.DataFrame(processed_data)
+    return df
+With this change, if the API response doesn’t include (for example) "phylum_name", we try to get the name from the "ancestors" list.
+
+Step 2. Build the Tree
+Now your tree-building code (and in particular, the part that creates hoverable markers for non‑species nodes) will have the proper text for higher taxa. For example, when constructing the hierarchy, the code uses:
+
+python
+Copy
+"name": row[f"taxon_{rank}"] if rank != "species" else row["name"],
+With the updated data, for a phylum node you should now have a non‑empty string (like "Arthropoda").
+
+Why This Works
+Before:
+The hover text for higher taxa was coming from columns like "taxon_phylum" that were often empty because the API didn’t populate them.
+After:
+We extract the correct higher taxon names from the observation’s "ancestors" list when available, ensuring that when building the tree the appropriate name (e.g. "Arthropoda") is available for the phylum node.
