@@ -73,7 +73,10 @@ class INaturalistAPI:
                     params["taxon_id"] = taxon_params[taxonomic_group]
 
                 print(f"Making API request with params: {params}")
-
+                
+                # Initialize database connection
+                db = Database.get_instance()
+                
                 response = requests.get(
                     f"{INaturalistAPI.BASE_URL}/observations",
                     params=params
