@@ -91,27 +91,46 @@ class TreeBuilder:
         # Create figure
         fig = go.Figure()
 
-        # Add curved edges
+        # Add right-angled edges
         for parent, child in edges:
             px, py = pos[parent]
             cx, cy = pos[child]
-            # Create curved path using control points
-            path_x = [px, (px + cx)/2, (px + cx)/2, cx]
-            path_y = [py, py, cy, cy]
+            
+            # Create right-angled path
+            path_x = [px, px, cx]
+            path_y = [py, cy, cy]
+            
+            # Calculate line length for label size
+            line_length = abs(cy - py) + abs(cx - px)
             
             fig.add_trace(go.Scatter(
                 x=path_x,
                 y=path_y,
                 mode="lines",
                 line=dict(
-                    color="#2E7D32", 
-                    width=1,
-                    shape='spline',
-                    smoothing=1
+                    color="#2E7D32",
+                    width=1
                 ),
                 hoverinfo="skip",
                 showlegend=False
             ))
+            
+            # Add rank labels for order and family with varying sizes
+            if node_id in nodes and nodes[node_id].get("rank") in ["order", "family"]:
+                label_size = min(14 + (line_length * 2), 24)  # Scale size between 14 and 24
+                mid_x = px + (cx - px) / 2
+                mid_y = cy
+                
+                fig.add_trace(go.Scatter(
+                    x=[mid_x],
+                    y=[mid_y],
+                    mode="text",
+                    text=[nodes[node_id]["rank"].title()],
+                    textposition="top center",
+                    textfont=dict(size=label_size),
+                    hoverinfo="skip",
+                    showlegend=False
+                ))
 
         # Add nodes and labels
         for node_id, node_info in nodes.items():
