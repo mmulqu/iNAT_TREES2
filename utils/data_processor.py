@@ -110,8 +110,11 @@ class DataProcessor:
                     continue
                     
                 if taxon_id not in current_level:
+                    # Get the actual name for this rank from the taxon_ columns
+                    taxon_name = row[f"taxon_{rank}"] if rank != "species" else row["name"]
+                    
                     current_level[taxon_id] = {
-                        "name": row[f"taxon_{rank}"] if rank != "species" else row["name"],
+                        "name": taxon_name,  # Use the actual taxon name
                         "common_name": row["common_name"] if rank == "species" else "",
                         "rank": rank,
                         "children": {}
