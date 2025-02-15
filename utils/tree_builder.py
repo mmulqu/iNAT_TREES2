@@ -115,8 +115,8 @@ class TreeBuilder:
             ))
             
             # Add node at branch point for higher taxonomic ranks
-            if parent in nodes and nodes[parent].get("rank"):
-                label = nodes[parent]["name"] if nodes[parent]["name"] else nodes[parent]["rank"].title()
+            if parent in nodes and nodes[parent].get("name"):
+                label = nodes[parent]["name"]
                 
                 fig.add_trace(go.Scatter(
                     x=[px],
