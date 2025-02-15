@@ -28,7 +28,8 @@ class INaturalistAPI:
                     "per_page": per_page,
                     "page": page,
                     "order": "desc",
-                    "order_by": "created_at"
+                    "order_by": "created_at",
+                    "include_all_ancestors": "true"
                 }
                 
                 if taxonomic_group in taxon_params:

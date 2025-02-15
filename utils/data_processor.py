@@ -79,7 +79,11 @@ class DataProcessor:
         if taxonomic_group and taxonomic_group in DataProcessor.TAXONOMIC_FILTERS:
             filter_criteria = DataProcessor.TAXONOMIC_FILTERS[taxonomic_group]
             for rank, value in filter_criteria.items():
-                df = df[df[f"{rank}_name"].fillna('').str.lower() == value.lower()]
+                mask = df[f"{rank}_name"].fillna('').str.lower() == value.lower()
+                if mask.any():  # Only apply filter if matches found
+                    df = df[mask]
+                else:
+                    return pd.DataFrame()  # Return empty if no matches
         
         return df
 
