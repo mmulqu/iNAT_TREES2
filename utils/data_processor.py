@@ -48,8 +48,9 @@ class DataProcessor:
         """
         Build hierarchical taxonomy with evolutionary distances based on rank levels.
         """
-        # Use rank_level for more accurate distances
-        rank_distances = lambda level: (100 - level) / 20.0  # Convert iNat rank levels to distances
+        def get_distance(rank_level):
+            """Convert iNat rank levels to distances"""
+            return (100 - rank_level) / 20.0 if rank_level else 1.0
         
         sorted_df = df.sort_values(by=["kingdom", "phylum", "class", "order", "family", "genus", "species"])
         hierarchy = {}
@@ -65,7 +66,8 @@ class DataProcessor:
                     break
                     
                 taxon_id = row[rank]
-                current_distance += rank_distances[rank]
+                rank_level = row.get(f"{rank}_level")
+                current_distance += get_distance(rank_level)
                 ancestor_chain.append((rank, taxon_id))
                 
                 matches_filter = (
