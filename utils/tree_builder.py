@@ -20,7 +20,8 @@ class TreeBuilder:
             # Store node information
             nodes[current_id] = {
                 "name": node.get("name", ""),
-                "common_name": node.get("common_name", "")
+                "common_name": node.get("common_name", ""),
+                "rank": node.get("rank", "")
             }
 
             # Add edge from parent if exists
@@ -100,9 +101,7 @@ class TreeBuilder:
             path_x = [px, px, cx]
             path_y = [py, cy, cy]
             
-            # Calculate line length for label size
-            line_length = abs(cy - py) + abs(cx - px)
-            
+            # Add branch lines
             fig.add_trace(go.Scatter(
                 x=path_x,
                 y=path_y,
@@ -115,26 +114,28 @@ class TreeBuilder:
                 showlegend=False
             ))
             
-            # Add rank labels for order and family with varying sizes
-            if parent in nodes and nodes[parent].get("rank") in ["order", "family"]:
-                label_size = min(14 + (line_length * 2), 24)  # Scale size between 14 and 24
-                mid_x = px + (cx - px) / 2
-                mid_y = cy
+            # Add node at branch point for higher taxonomic ranks
+            if parent in nodes and nodes[parent].get("rank"):
+                label = f"{nodes[parent]['rank'].title()}"
+                if nodes[parent]["name"]:
+                    label += f"<br>{nodes[parent]['name']}"
                 
                 fig.add_trace(go.Scatter(
-                    x=[mid_x],
-                    y=[mid_y],
-                    mode="text",
-                    text=[nodes[node_id]["rank"].title()],
-                    textposition="top center",
-                    textfont=dict(size=label_size),
-                    hoverinfo="skip",
+                    x=[px],
+                    y=[cy],
+                    mode="markers",
+                    marker=dict(
+                        size=6,
+                        color="#2E7D32"
+                    ),
+                    hoverinfo="text",
+                    hovertext=label,
                     showlegend=False
                 ))
 
-        # Add nodes and labels
+        # Add nodes and labels for species
         for node_id, node_info in nodes.items():
-            if node_info["name"]:  # Only add labels for named nodes
+            if node_info.get("rank") == "species":  # Only add labels for species nodes
                 label = f"{node_info['name']}"
                 if node_info["common_name"]:
                     label += f"<br>{node_info['common_name']}"
