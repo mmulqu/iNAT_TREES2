@@ -1,4 +1,3 @@
-
 import os
 import psycopg2
 from psycopg2.extras import DictCursor, Json
@@ -8,12 +7,12 @@ from datetime import datetime, timezone
 
 class Database:
     _instance = None
-    
+
     def __init__(self):
         self.conn = None
         self.connect()
         self.create_tables()
-    
+
     def connect(self):
         """Establish database connection."""
         try:
@@ -22,7 +21,7 @@ class Database:
         except Exception as e:
             print(f"Database connection error: {e}")
             self.conn = None
-    
+
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
@@ -30,9 +29,9 @@ class Database:
         elif cls._instance.conn is None or cls._instance.conn.closed:
             cls._instance.connect()
         return cls._instance
-    
+
     def create_tables(self):
-        """Create the necessary tables if they don't exist."""
+        """Create tables if they don't exist."""
         with self.conn.cursor() as cur:
             cur.execute("""
             CREATE TABLE IF NOT EXISTS taxa (
@@ -58,7 +57,7 @@ class Database:
         self.connect()
         if not self.conn:
             return None
-        
+
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("""
             SELECT branch_data
@@ -75,7 +74,7 @@ class Database:
         self.connect()
         if not self.conn:
             return
-        
+
         with self.conn.cursor() as cur:
             cur.execute("""
             INSERT INTO cached_branches (species_id, branch_data, last_updated)
@@ -91,7 +90,7 @@ class Database:
         self.connect()
         if not self.conn:
             return None
-        
+
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("""
             SELECT id, name, rank, common_name, parent_id
@@ -108,7 +107,7 @@ class Database:
         self.connect()
         if not self.conn:
             return
-        
+
         with self.conn.cursor() as cur:
             cur.execute("""
             INSERT INTO taxa (id, name, rank, common_name, parent_id)
