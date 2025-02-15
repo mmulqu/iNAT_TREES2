@@ -129,7 +129,7 @@ class TreeBuilder:
                         color="#2E7D32"
                     ),
                     hoverinfo="text",
-                    hovertext=label,
+                    hovertext=f"{nodes[parent]['name']}",
                     showlegend=False
                 ))
 
