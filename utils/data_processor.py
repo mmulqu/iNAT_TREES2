@@ -1,3 +1,4 @@
+
 import pandas as pd
 from typing import List, Dict
 
@@ -8,39 +9,42 @@ class DataProcessor:
         processed_data = []
         
         for obs in observations:
-            # Skip invalid observations
-            if not obs.get("taxon") or not obs.get("id"):
+            try:
+                if not obs.get("taxon") or not obs.get("id"):
+                    continue
+                    
+                taxon = obs["taxon"]
+                ancestor_ids = taxon.get("ancestor_ids", [])
+                
+                # More defensive check of ancestor_ids
+                if not isinstance(ancestor_ids, list):
+                    continue
+                    
+                # Create a padded version of ancestor_ids
+                padded_ancestors = ancestor_ids + [None] * 7  # Ensure we have enough elements
+                
+                processed_data.append({
+                    "observation_id": obs["id"],
+                    "taxon_id": taxon["id"],
+                    "name": taxon["name"],
+                    "rank": taxon["rank"],
+                    "kingdom": padded_ancestors[0],
+                    "phylum": padded_ancestors[1],
+                    "class": padded_ancestors[2],
+                    "order": padded_ancestors[3],
+                    "family": padded_ancestors[4],
+                    "genus": padded_ancestors[5],
+                    "species": taxon["id"],
+                    "common_name": taxon.get("preferred_common_name", ""),
+                    "observed_on": obs.get("observed_on"),
+                    "photo_url": obs.get("photos", [{}])[0].get("url", "")
+                })
+                
+            except Exception as e:
+                print(f"Error processing observation {obs.get('id')}: {str(e)}")
+                print(f"ancestor_ids: {taxon.get('ancestor_ids')}")
                 continue
                 
-            taxon = obs["taxon"]
-            
-            # Skip if taxon is at root level (Life) or missing crucial data
-            if taxon.get("rank") == "life" or not taxon.get("ancestor_ids"):
-                continue
-                
-            # Skip if ancestor_ids is empty or invalid
-            ancestor_ids = taxon.get("ancestor_ids", [])
-            if not ancestor_ids or len(ancestor_ids) < 2:  # Need at least kingdom level
-                continue
-                
-            ancestor_ids = taxon.get("ancestor_ids", [])
-            processed_data.append({
-                "observation_id": obs["id"],
-                "taxon_id": taxon["id"],
-                "name": taxon["name"],
-                "rank": taxon["rank"],
-                "kingdom": ancestor_ids[0] if len(ancestor_ids) > 0 else None,
-                "phylum": ancestor_ids[1] if len(ancestor_ids) > 1 else None,
-                "class": ancestor_ids[2] if len(ancestor_ids) > 2 else None,
-                "order": ancestor_ids[3] if len(ancestor_ids) > 3 else None,
-                "family": ancestor_ids[4] if len(ancestor_ids) > 4 else None,
-                "genus": ancestor_ids[5] if len(ancestor_ids) > 5 else None,
-                "species": taxon["id"],
-                "common_name": taxon.get("preferred_common_name", ""),
-                "observed_on": obs.get("observed_on"),
-                "photo_url": obs.get("photos", [{}])[0].get("url", "")
-            })
-            
         return pd.DataFrame(processed_data)
 
     @staticmethod
