@@ -122,9 +122,8 @@ class TreeBuilder:
             if node_info.get("rank") != "species":
                 name = node_info.get("name", "")
                 rank = node_info.get("rank", "").title()
-                taxon_id = node_info.get("taxon_id", "")
                 
-                hover_text = f"{name} ({rank})\nID: {taxon_id}" if name else f"{rank}\nID: {taxon_id}"
+                hover_text = f"{rank}: {name}" if name else rank
                 
                 fig.add_trace(go.Scatter(
                     x=[pos[node_id][0]],
