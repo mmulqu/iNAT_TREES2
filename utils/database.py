@@ -49,8 +49,8 @@ class Database:
                 last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE INDEX IF NOT EXISTS taxa_parent_id_idx ON taxa(parent_id);
-            CREATE INDEX IF NOT EXISTS taxa_rank_idx ON taxa(rank)
+            CREATE INDEX IF NOT EXISTS taxa_rank_idx ON taxa(rank);
+            CREATE INDEX IF NOT EXISTS taxa_ancestor_ids_idx ON taxa USING gin(ancestor_ids)
             """)
             self.conn.commit()
 
