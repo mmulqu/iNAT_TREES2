@@ -123,6 +123,7 @@ class TreeBuilder:
                 name = node_info.get("name", "")
                 rank = node_info.get("rank", "").title()
                 
+                # Format as "Rank: Name"
                 hover_text = f"{rank}: {name}" if name else rank
                 
                 fig.add_trace(go.Scatter(
@@ -130,7 +131,7 @@ class TreeBuilder:
                     y=[pos[node_id][1]],
                     mode="markers",
                     marker=dict(
-                        size=8,
+                        size=6,
                         color="#2E7D32"
                     ),
                     hoverinfo="text",
