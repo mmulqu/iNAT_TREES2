@@ -8,7 +8,20 @@ class TreeBuilder:
     @staticmethod
     def create_tree_structure(hierarchy: Dict) -> Tuple[Dict, Dict]:
         """Convert hierarchy to a format suitable for plotting."""
-        print("Initial hierarchy:", hierarchy)  # Debug print
+        print("\nSTART OF HIERARCHY DEBUGGING")
+        
+        # Debug print for hierarchy
+        def print_node(node, level=0):
+            indent = "  " * level
+            name = node.get("name", "")
+            rank = node.get("rank", "")
+            print(f"{indent}Node - Name: {name}, Rank: {rank}")
+            for child in node["children"].values():
+                print_node(child, level + 1)
+        
+        print("Full hierarchy structure:")
+        print_node({"children": hierarchy})
+        
         nodes = {}
         edges = []
         node_counter = 0
@@ -18,14 +31,15 @@ class TreeBuilder:
             current_id = node_counter
             node_counter += 1
             
-            print(f"Current node: {node}")  # Debug print
+            # Debug print for each node as we process it
+            print(f"\nProcessing node {current_id}:")
+            print(f"Name: {node.get('name')}")
+            print(f"Rank: {node.get('rank')}")
 
-            # Store node information directly from the node
             nodes[current_id] = {
-                "name": node.get("name", ""),  # This should contain the actual name
+                "name": node.get("name", ""),
                 "common_name": node.get("common_name", ""),
                 "rank": node.get("rank", ""),
-                "taxon_id": next(iter(node["children"])) if node["children"] else None
             }
 
             # Add edge from parent if exists
