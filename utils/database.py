@@ -40,8 +40,9 @@ class Database:
                 name VARCHAR(255) NOT NULL,
                 rank VARCHAR(50) NOT NULL,
                 common_name VARCHAR(255),
-                parent_id INTEGER REFERENCES taxa(id),
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                parent_id INTEGER,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (parent_id) REFERENCES taxa(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS cached_branches (
