@@ -1,0 +1,84 @@
+and the result:
+DataFrame columns: ['observation_id', 'taxon_id', 'name', 'rank', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'common_name', 'observed_on', 'photo_url', 'taxon_kingdom', 'taxon_phylum', 'taxon_class', 'taxon_order', 'taxon_family', 'taxon_genus']
+Sample row taxon names:
+kingdom: ID = 48460, Name = 
+phylum: ID = 1, Name = 
+class: ID = 2, Name = 
+order: ID = 355675, Name = 
+family: ID = 20978, Name = 
+genus: ID = 20979, Name = 
+
+I got an error in my display:
+An error occurred: 'taxon_species'
+
+
+Ah, I see two issues:
+
+The names aren't being stored correctly in your processed data. In process_observations, you're getting the names but they're not appearing in the DataFrame.
+In build_taxonomy_hierarchy, we're trying to access 'taxon_species' which doesn't exist - we need to handle species differently.
+Let's fix both:
+
+python
+
+Copy
+@staticmethod
+def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
+    # Debug print to see what data we have
+    print("\nDataFrame columns:", df.columns.tolist())
+    print("\nSample row taxon names:")
+    sample_row = df.iloc[0]
+    for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
+        print(f"{rank}: ID = {sample_row[rank]}, Name = {sample_row[f'taxon_{rank}' if rank != 'species' else 'name']}")
+            
+    hierarchy = {}
+    
+    for _, row in df.iterrows():
+        current_level = hierarchy
+        ancestor_chain = []
+        
+        for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
+            if pd.isna(row[rank]):
+                break
+                
+            taxon_id = row[rank]
+            ancestor_chain.append((rank, taxon_id))
+            
+            matches_filter = (
+                (filter_rank is None and filter_taxon_id is None) or
+                (filter_rank == rank and filter_taxon_id == taxon_id) or
+                any(ancestor[1] == filter_taxon_id for ancestor in ancestor_chain)
+            )
+            
+            if not matches_filter:
+                continue
+                
+            if taxon_id not in current_level:
+                # Handle species differently since it doesn't have a taxon_ prefix
+                if rank == "species":
+                    taxon_name = row["name"]
+                else:
+                    taxon_name = row[f"taxon_{rank}"]
+                    
+                print(f"Creating node for {rank}: ID={taxon_id}, Name={taxon_name}")  # Debug print
+                
+                current_level[taxon_id] = {
+                    "name": taxon_name,
+                    "common_name": row["common_name"] if rank == "species" else "",
+                    "rank": rank,
+                    "children": {}
+                }
+            current_level = current_level[taxon_id]["children"]
+    
+    return hierarchy
+And let's check your process_observations to make sure the names are being properly stored. Could you show me a sample of what's in ancestors for one observation? Add this debug print in process_observations:
+
+python
+
+Copy
+print("\nSample observation ancestors:")
+if observations:
+    sample_obs = observations[0]
+    print(f"Ancestors for {sample_obs['taxon']['name']}:")
+    for ancestor in sample_obs['taxon'].get('ancestors', []):
+        print(f"  {ancestor.get('rank')}: {ancestor.get('name')}")
+This will help us verify that we're getting and storing the ancestor names correctly from the API.
