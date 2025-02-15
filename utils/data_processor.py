@@ -2,6 +2,14 @@ import pandas as pd
 from typing import List, Dict, Optional
 
 class DataProcessor:
+    @staticmethod
+    def get_ancestor_name(ancestors: List[Dict], rank: str) -> str:
+        """Extract ancestor name by rank from ancestors list."""
+        for ancestor in ancestors:
+            if ancestor.get("rank") == rank:
+                return ancestor.get("name", "")
+        return ""
+
     TAXONOMIC_FILTERS = {
         "Insects": {"class": "Insecta"},
         "Fungi": {"kingdom": "Fungi"},
@@ -31,6 +39,10 @@ class DataProcessor:
                 # Create a padded version of ancestor_ids
                 padded_ancestors = ancestor_ids + [None] * 7  # Ensure we have enough elements
 
+                ancestors = taxon.get("ancestors", [])
+                if not isinstance(ancestors, list):
+                    ancestors = []
+
                 processed_data.append({
                     "observation_id": obs["id"],
                     "taxon_id": taxon["id"],
@@ -46,12 +58,12 @@ class DataProcessor:
                     "common_name": taxon.get("preferred_common_name", ""),
                     "observed_on": obs.get("observed_on"),
                     "photo_url": obs.get("photos", [{}])[0].get("url", ""),
-                    "taxon_kingdom": taxon.get("kingdom_name", ""),
-                    "taxon_phylum": taxon.get("phylum_name", ""),
-                    "taxon_class": taxon.get("class_name", ""),
-                    "taxon_order": taxon.get("order_name", ""),
-                    "taxon_family": taxon.get("family_name", ""),
-                    "taxon_genus": taxon.get("genus_name", "")
+                    "taxon_kingdom": taxon.get("kingdom_name") or DataProcessor.get_ancestor_name(ancestors, "kingdom"),
+                    "taxon_phylum": taxon.get("phylum_name") or DataProcessor.get_ancestor_name(ancestors, "phylum"),
+                    "taxon_class": taxon.get("class_name") or DataProcessor.get_ancestor_name(ancestors, "class"),
+                    "taxon_order": taxon.get("order_name") or DataProcessor.get_ancestor_name(ancestors, "order"),
+                    "taxon_family": taxon.get("family_name") or DataProcessor.get_ancestor_name(ancestors, "family"),
+                    "taxon_genus": taxon.get("genus_name") or DataProcessor.get_ancestor_name(ancestors, "genus")
                 })
 
             except Exception as e:
