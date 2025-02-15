@@ -1,0 +1,128 @@
+import pandas as pd
+from typing import List, Dict, Optional
+
+class DataProcessor:
+    @staticmethod
+    def get_ancestor_name(ancestors: List[Dict], rank: str) -> str:
+        """Extract ancestor name by rank from ancestors list."""
+        for ancestor in ancestors:
+            if ancestor.get("rank") == rank:
+                return ancestor.get("name", "")
+        return ""
+    
+    @staticmethod
+    def get_ancestor_id(ancestors: List[Dict], rank: str) -> Optional[int]:
+        """Extract ancestor id by rank from ancestors list."""
+        for ancestor in ancestors:
+            if ancestor.get("rank") == rank:
+                return ancestor.get("id")
+        return None
+
+    @staticmethod
+    def process_observations(observations: List[Dict], taxonomic_group: Optional[str] = None) -> pd.DataFrame:
+        """Process raw observations into a structured DataFrame."""
+        processed_data = []
+
+        for obs in observations:
+            try:
+                if not obs.get("taxon") or not obs.get("id"):
+                    continue
+
+                taxon = obs["taxon"]
+
+                # First, try to get the ancestors list
+                ancestors = taxon.get("ancestors", [])
+                if not isinstance(ancestors, list) or not ancestors:
+                    ancestors = []  # will use fallback below
+
+                # Also get the padded ancestor_ids from the API
+                padded_ancestors = taxon.get("ancestor_ids", [])
+                if not isinstance(padded_ancestors, list):
+                    padded_ancestors = []
+                # Ensure at least 6 values for kingdom, phylum, class, order, family, genus
+                padded_ancestors = padded_ancestors + [None] * (6 - len(padded_ancestors))
+                
+                # For the higher taxa, try to use ancestors if available; otherwise, fallback
+                ranks = ["kingdom", "phylum", "class", "order", "family", "genus"]
+                rank_data = {}
+                for idx, rank in enumerate(ranks):
+                    if ancestors:
+                        # Prefer the ancestors list
+                        rank_data[f"{rank}_id"] = DataProcessor.get_ancestor_id(ancestors, rank)
+                        rank_data[f"taxon_{rank}"] = taxon.get(f"{rank}_name") or DataProcessor.get_ancestor_name(ancestors, rank)
+                    else:
+                        # Fall back to padded_ancestors for id and the taxon field for name
+                        rank_data[f"{rank}_id"] = padded_ancestors[idx]
+                        rank_data[f"taxon_{rank}"] = taxon.get(f"{rank}_name", "")
+                
+                # Species data comes from the taxon itself.
+                processed_data.append({
+                    "observation_id": obs["id"],
+                    "taxon_id": taxon["id"],
+                    "name": taxon["name"],
+                    "rank": taxon["rank"],
+                    **rank_data,
+                    "species_id": taxon["id"],
+                    "common_name": taxon.get("preferred_common_name", ""),
+                    "observed_on": obs.get("observed_on"),
+                    "photo_url": obs.get("photos", [{}])[0].get("url", "")
+                })
+
+            except Exception as e:
+                print(f"Error processing observation {obs.get('id')}: {str(e)}")
+                continue
+
+        df = pd.DataFrame(processed_data)
+        return df
+
+    @staticmethod
+    def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
+        """
+        Build hierarchical taxonomy with optional filtering by rank/taxon.
+        
+        Args:
+            df: DataFrame with taxonomic data
+            filter_rank: Taxonomic rank to filter by (e.g., 'class', 'order')
+            filter_taxon_id: ID of the taxon to filter by
+        """
+        hierarchy = {}
+        
+        # We build the tree in the order: kingdom, phylum, class, order, family, genus, species.
+        for _, row in df.iterrows():
+            current_level = hierarchy
+            ancestor_chain = []
+            for rank in ["kingdom", "phylum", "class", "order", "family", "genus"]:
+                taxon_id = row.get(f"{rank}_id")
+                if taxon_id is None:
+                    break
+                    
+                ancestor_chain.append((rank, taxon_id))
+                
+                matches_filter = (
+                    (filter_rank is None and filter_taxon_id is None) or
+                    (filter_rank == rank and filter_taxon_id == taxon_id) or
+                    any(ancestor[1] == filter_taxon_id for ancestor in ancestor_chain)
+                )
+                
+                if not matches_filter:
+                    continue
+                    
+                if taxon_id not in current_level:
+                    current_level[taxon_id] = {
+                        "name": row.get(f"taxon_{rank}", ""),
+                        "common_name": "",
+                        "rank": rank,
+                        "children": {}
+                    }
+                current_level = current_level[taxon_id]["children"]
+            
+            # Add the species node at the bottom
+            species_id = row["species_id"]
+            if species_id not in current_level:
+                current_level[species_id] = {
+                    "name": row["name"],
+                    "common_name": row["common_name"],
+                    "rank": "species",
+                    "children": {}
+                }
+        return hierarchy
