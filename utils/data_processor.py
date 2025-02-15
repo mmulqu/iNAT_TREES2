@@ -64,17 +64,25 @@ class DataProcessor:
     @staticmethod
     def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
         """
-        Build hierarchical taxonomy with optional filtering by rank/taxon.
-        
-        Args:
-            df: DataFrame with taxonomic data
-            filter_rank: Taxonomic rank to filter by (e.g., 'class', 'order')
-            filter_taxon_id: ID of the taxon to filter by
+        Build hierarchical taxonomy with evolutionary distances and proper grouping.
         """
-        hierarchy = {}
+        rank_distances = {
+            "kingdom": 4.0,
+            "phylum": 3.0,
+            "class": 2.5,
+            "order": 2.0,
+            "family": 1.5,
+            "genus": 1.0,
+            "species": 0.5
+        }
         
-        for _, row in df.iterrows():
+        sorted_df = df.sort_values(by=["kingdom", "phylum", "class", "order", "family", "genus", "species"])
+        hierarchy = {}
+        last_common_ancestor = {}
+        
+        for _, row in sorted_df.iterrows():
             current_level = hierarchy
+            current_distance = 0
             ancestor_chain = []
             
             for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
@@ -82,6 +90,7 @@ class DataProcessor:
                     break
                     
                 taxon_id = row[rank]
+                current_distance += rank_distances[rank]
                 ancestor_chain.append((rank, taxon_id))
                 
                 matches_filter = (
@@ -98,8 +107,11 @@ class DataProcessor:
                         "name": row["name"] if rank == "species" else "",
                         "common_name": row["common_name"] if rank == "species" else "",
                         "rank": rank,
+                        "distance": current_distance,
                         "children": {}
                     }
+                    last_common_ancestor[rank] = taxon_id
+                    
                 current_level = current_level[taxon_id]["children"]
         
         return hierarchy

@@ -48,19 +48,35 @@ class TreeBuilder:
         for parent, child in edges:
             G[parent].append(child)
 
-        # Calculate positions
+        # Calculate positions with rank-based spacing
         pos = {}
+        rank_spacing = {
+            "kingdom": 200,
+            "phylum": 150,
+            "class": 120,
+            "order": 100,
+            "family": 80,
+            "genus": 60,
+            "species": 40
+        }
+        
         def calculate_positions(node_id, x=0, y=0, dx=1):
             pos[node_id] = (x, y)
             children = G[node_id]
             n_children = len(children)
+            
             if n_children > 0:
-                new_dx = dx * 0.5
-                total_width = (n_children - 1) * dx
+                node_rank = nodes[node_id].get("rank", "species")
+                spacing = rank_spacing.get(node_rank, 40)
+                new_dx = dx * 0.7  # Reduced scaling factor for better spread
+                total_width = (n_children - 1) * spacing
                 start_y = y - total_width / 2
+                
                 for i, child in enumerate(children):
-                    new_y = start_y + i * dx
-                    calculate_positions(child, x + 1, new_y, new_dx)
+                    new_y = start_y + i * spacing
+                    # Use evolutionary distance for x-position if available
+                    new_x = x + (nodes[child].get("distance", 1) - nodes[node_id].get("distance", 0)) * 100
+                    calculate_positions(child, new_x, new_y, new_dx)
 
         # Start layout calculation from root
         calculate_positions(0)
