@@ -40,15 +40,17 @@ class Database:
                 rank VARCHAR(50) NOT NULL,
                 common_name VARCHAR(255),
                 parent_id INTEGER,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (parent_id) REFERENCES taxa(id) ON DELETE CASCADE
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS cached_branches (
                 species_id INTEGER PRIMARY KEY,
                 branch_data JSONB NOT NULL,
                 last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
+            );
+
+            CREATE INDEX IF NOT EXISTS taxa_parent_id_idx ON taxa(parent_id);
+            CREATE INDEX IF NOT EXISTS taxa_rank_idx ON taxa(rank)
             """)
             self.conn.commit()
 
@@ -75,15 +77,20 @@ class Database:
         if not self.conn:
             return
 
-        with self.conn.cursor() as cur:
-            cur.execute("""
-            INSERT INTO cached_branches (species_id, branch_data, last_updated)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (species_id) DO UPDATE
-            SET branch_data = EXCLUDED.branch_data,
-                last_updated = EXCLUDED.last_updated
-            """, (species_id, Json(branch_data), datetime.now(timezone.utc)))
-            self.conn.commit()
+        try:
+            with self.conn:  # This creates a transaction
+                with self.conn.cursor() as cur:
+                    cur.execute("""
+                    INSERT INTO cached_branches (species_id, branch_data, last_updated)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (species_id) DO UPDATE
+                    SET branch_data = EXCLUDED.branch_data,
+                        last_updated = EXCLUDED.last_updated
+                    """, (species_id, Json(branch_data), datetime.now(timezone.utc)))
+        except Exception as e:
+            print(f"Error saving branch: {e}")
+            if self.conn:
+                self.conn.rollback()
 
     def get_taxon(self, taxon_id: int) -> Optional[Dict]:
         """Retrieve taxon information from the database."""
