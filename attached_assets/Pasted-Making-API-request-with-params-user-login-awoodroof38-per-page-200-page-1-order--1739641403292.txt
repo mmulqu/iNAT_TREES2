@@ -1,0 +1,719 @@
+Making API request with params: {'user_login': 'awoodroof38', 'per_page': 200, 'page': 1, 'order': 'desc', 'order_by': 'created_at', 'include': ['taxon', 'ancestors'], 'taxon_id': 40151}
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Found taxon 43698 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 424850 in database cache
+Found taxon 42241 in database cache
+Found taxon 568826 in database cache
+Found taxon 846305 in database cache
+Fetching taxon 42337 from API
+Found taxon 1431368 in database cache
+Fetching taxon 42339 from API
+Found taxon 524159 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 152870 in database cache
+Found taxon 424850 in database cache
+Found taxon 424850 in database cache
+Found taxon 42241 in database cache
+Found taxon 42241 in database cache
+Found taxon 568826 in database cache
+Found taxon 568826 in database cache
+Found taxon 846305 in database cache
+Found taxon 846305 in database cache
+Found taxon 42337 in database cache
+Found taxon 42337 in database cache
+Found taxon 1431368 in database cache
+Found taxon 1431368 in database cache
+Found taxon 42339 in database cache
+Found taxon 42339 in database cache
+Found taxon 524159 in database cache
+Found taxon 524159 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 424850 in database cache
+Found taxon 42153 in database cache
+Fetching taxon 42156 from API
+Fetching taxon 1510571 from API
+Found taxon 1510582 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 152870 in database cache
+Found taxon 424850 in database cache
+Found taxon 424850 in database cache
+Found taxon 42153 in database cache
+Found taxon 42153 in database cache
+Found taxon 42156 in database cache
+Found taxon 42156 in database cache
+Found taxon 1510571 in database cache
+Found taxon 1510571 in database cache
+Found taxon 1510582 in database cache
+Found taxon 1510582 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 925158 in database cache
+Found taxon 152871 in database cache
+Fetching taxon 424322 from API
+Found taxon 1317261 in database cache
+Fetching taxon 41457 from API
+Found taxon 41460 in database cache
+Fetching taxon 41461 from API
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 152870 in database cache
+Found taxon 925158 in database cache
+Found taxon 925158 in database cache
+Found taxon 152871 in database cache
+Found taxon 152871 in database cache
+Found taxon 424322 in database cache
+Found taxon 424322 in database cache
+Found taxon 1317261 in database cache
+Found taxon 1317261 in database cache
+Found taxon 41457 in database cache
+Found taxon 41457 in database cache
+Found taxon 41460 in database cache
+Found taxon 41460 in database cache
+Found taxon 41461 in database cache
+Found taxon 41461 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 41573 in database cache
+Found taxon 41660 in database cache
+Fetching taxon 41661 from API
+Found taxon 41663 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 848324 in database cache
+Found taxon 41573 in database cache
+Found taxon 41573 in database cache
+Found taxon 41660 in database cache
+Found taxon 41660 in database cache
+Found taxon 41661 in database cache
+Found taxon 41661 in database cache
+Found taxon 41663 in database cache
+Found taxon 41663 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Found taxon 870778 in database cache
+Found taxon 488924 in database cache
+Found taxon 55986 in database cache
+Found taxon 179534 in database cache
+Found taxon 1317289 in database cache
+Fetching taxon 45762 from API
+Found taxon 45763 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Found taxon 43698 in database cache
+Found taxon 870778 in database cache
+Found taxon 870778 in database cache
+Found taxon 488924 in database cache
+Found taxon 488924 in database cache
+Found taxon 55986 in database cache
+Found taxon 55986 in database cache
+Found taxon 179534 in database cache
+Found taxon 179534 in database cache
+Found taxon 1317289 in database cache
+Found taxon 1317289 in database cache
+Found taxon 45762 in database cache
+Found taxon 45762 in database cache
+Found taxon 45763 in database cache
+Found taxon 45763 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 41573 in database cache
+Found taxon 41871 in database cache
+Found taxon 846224 in database cache
+Found taxon 41878 in database cache
+Found taxon 41880 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 848324 in database cache
+Found taxon 41573 in database cache
+Found taxon 41573 in database cache
+Found taxon 41871 in database cache
+Found taxon 41871 in database cache
+Found taxon 846224 in database cache
+Found taxon 846224 in database cache
+Found taxon 41878 in database cache
+Found taxon 41878 in database cache
+Found taxon 41880 in database cache
+Found taxon 41880 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 40268 in database cache
+Found taxon 446946 in database cache
+Fetching taxon 446959 from API
+Fetching taxon 40269 from API
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 848324 in database cache
+Found taxon 40268 in database cache
+Found taxon 40268 in database cache
+Found taxon 446946 in database cache
+Found taxon 446946 in database cache
+Found taxon 446959 in database cache
+Found taxon 446959 in database cache
+Found taxon 40269 in database cache
+Found taxon 40269 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 43094 in database cache
+Found taxon 43095 in database cache
+Found taxon 43096 in database cache
+Found taxon 43111 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 848323 in database cache
+Found taxon 43094 in database cache
+Found taxon 43094 in database cache
+Found taxon 43095 in database cache
+Found taxon 43095 in database cache
+Found taxon 43096 in database cache
+Found taxon 43096 in database cache
+Found taxon 43111 in database cache
+Found taxon 43111 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Fetching taxon 129411 from API
+Fetching taxon 45933 from API
+Fetching taxon 339572 from API
+Found taxon 1279829 in database cache
+Fetching taxon 520586 from API
+Fetching taxon 46217 from API
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Found taxon 43698 in database cache
+Found taxon 129411 in database cache
+Found taxon 129411 in database cache
+Found taxon 45933 in database cache
+Found taxon 45933 in database cache
+Found taxon 339572 in database cache
+Found taxon 339572 in database cache
+Found taxon 1279829 in database cache
+Found taxon 1279829 in database cache
+Found taxon 520586 in database cache
+Found taxon 520586 in database cache
+Found taxon 46217 in database cache
+Found taxon 46217 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Found taxon 870778 in database cache
+Found taxon 488924 in database cache
+Found taxon 55986 in database cache
+Found taxon 179534 in database cache
+Fetching taxon 846301 from API
+Found taxon 44259 in database cache
+Found taxon 1431446 in database cache
+Fetching taxon 1431621 from API
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848323 in database cache
+Found taxon 848323 in database cache
+Found taxon 43698 in database cache
+Found taxon 43698 in database cache
+Found taxon 870778 in database cache
+Found taxon 870778 in database cache
+Found taxon 488924 in database cache
+Found taxon 488924 in database cache
+Found taxon 55986 in database cache
+Found taxon 55986 in database cache
+Found taxon 179534 in database cache
+Found taxon 179534 in database cache
+Found taxon 846301 in database cache
+Found taxon 846301 in database cache
+Found taxon 44259 in database cache
+Found taxon 44259 in database cache
+Found taxon 1431446 in database cache
+Found taxon 1431446 in database cache
+Found taxon 1431621 in database cache
+Found taxon 1431621 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 424850 in database cache
+Found taxon 42241 in database cache
+Fetching taxon 568847 from API
+Found taxon 846296 in database cache
+Fetching taxon 42331 from API
+Found taxon 42334 in database cache
+Found taxon 601847 in database cache
+Found taxon 48460 in database cache
+Found taxon 48460 in database cache
+Found taxon 1 in database cache
+Found taxon 1 in database cache
+Found taxon 2 in database cache
+Found taxon 2 in database cache
+Found taxon 355675 in database cache
+Found taxon 355675 in database cache
+Found taxon 40151 in database cache
+Found taxon 40151 in database cache
+Found taxon 848317 in database cache
+Found taxon 848317 in database cache
+Found taxon 848320 in database cache
+Found taxon 848320 in database cache
+Found taxon 848324 in database cache
+Found taxon 848324 in database cache
+Found taxon 152870 in database cache
+Found taxon 152870 in database cache
+Found taxon 424850 in database cache
+Found taxon 424850 in database cache
+Found taxon 42241 in database cache
+Found taxon 42241 in database cache
+Found taxon 568847 in database cache
+Found taxon 568847 in database cache
+Found taxon 846296 in database cache
+Found taxon 846296 in database cache
+Found taxon 42331 in database cache
+Found taxon 42331 in database cache
+Found taxon 42334 in database cache
+Found taxon 42334 in database cache
+Found taxon 601847 in database cache
+Found taxon 601847 in database cache
+
+First observation ancestry:
+Taxon: Rodentia
+Ancestors:
+  stateofmatter: Life
+  kingdom: Animalia
+  phylum: Chordata
+  subphylum: Vertebrata
+  class: Mammalia
+  subclass: Theria
+  infraclass: Placentalia
+  superorder: Euarchontoglires
+  order: Rodentia
+
+First observation ancestors:
+Taxon: Rodentia
+Ancestors:
+  stateofmatter: Life
+  kingdom: Animalia
+  phylum: Chordata
+  subphylum: Vertebrata
+  class: Mammalia
+  subclass: Theria
+  infraclass: Placentalia
+  superorder: Euarchontoglires
+  order: Rodentia
+
+DataFrame columns: ['observation_id', 'taxon_id', 'name', 'rank', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'common_name', 'observed_on', 'photo_url', 'taxon_kingdom', 'taxon_phylum', 'taxon_class', 'taxon_order', 'taxon_family', 'taxon_genus']
+
+Sample row full data:
+observation_id                                            219607406
+taxon_id                                                      43698
+name                                                       Rodentia
+rank                                                          order
+kingdom                                                       48460
+phylum                                                            1
+class                                                             2
+order                                                        355675
+family                                                        40151
+genus                                                      848317.0
+species                                                       43698
+common_name                                                 Rodents
+observed_on                                              2018-06-21
+photo_url         https://static.inaturalist.org/photos/38872165...
+taxon_kingdom                                              Animalia
+taxon_phylum                                               Chordata
+taxon_class                                                Mammalia
+taxon_order                                                Rodentia
+taxon_family                                                       
+taxon_genus                                                        
+Name: 0, dtype: object
+
+Sample row taxon names:
+kingdom: ID = 48460, Name = Animalia
+phylum: ID = 1, Name = Chordata
+class: ID = 2, Name = Mammalia
+order: ID = 355675, Name = Rodentia
+family: ID = 40151, Name = 
+genus: ID = 848317.0, Name = 
+species: ID = 43698, Name = Rodentia
+Creating node for kingdom: ID=48460, Name=Animalia
+Creating node for phylum: ID=1, Name=Chordata
+Creating node for class: ID=2, Name=Mammalia
+Creating node for order: ID=355675, Name=Rodentia
+Creating node for family: ID=40151, Name=
+Creating node for genus: ID=848317.0, Name=
+Creating node for species: ID=43698, Name=Rodentia
+Creating node for species: ID=524159, Name=Tragelaphus strepsiceros strepsiceros
+Creating node for species: ID=1510582, Name=Giraffa giraffa giraffa
+Creating node for species: ID=41461, Name=Delphinapterus leucas
+Creating node for species: ID=41663, Name=Procyon lotor
+Creating node for species: ID=45763, Name=Ondatra zibethicus
+Creating node for species: ID=41880, Name=Mephitis mephitis
+Creating node for species: ID=40269, Name=Vespertilionidae
+Creating node for species: ID=43111, Name=Sylvilagus floridanus
+Creating node for species: ID=46217, Name=Tamias striatus
+Creating node for species: ID=1431621, Name=Microtus drummondii
+Creating node for species: ID=601847, Name=Hippotragus niger niger
+
+Final hierarchy structure:
+kingdom: Animalia (ID: 48460)
+  phylum: Chordata (ID: 1)
+    class: Mammalia (ID: 2)
+      order: Rodentia (ID: 355675)
+        family:  (ID: 40151)
+          genus:  (ID: 848317.0)
+            species: Rodentia (ID: 43698)
+            species: Tragelaphus strepsiceros strepsiceros (ID: 524159)
+            species: Giraffa giraffa giraffa (ID: 1510582)
+            species: Delphinapterus leucas (ID: 41461)
+            species: Procyon lotor (ID: 41663)
+            species: Ondatra zibethicus (ID: 45763)
+            species: Mephitis mephitis (ID: 41880)
+            species: Vespertilionidae (ID: 40269)
+            species: Sylvilagus floridanus (ID: 43111)
+            species: Tamias striatus (ID: 46217)
+            species: Microtus drummondii (ID: 1431621)
+            species: Hippotragus niger niger (ID: 601847)
+
+START OF HIERARCHY DEBUGGING
+Full hierarchy structure:
+Node - Name: , Rank: 
+  Node - Name: Animalia, Rank: kingdom
+    Node - Name: Chordata, Rank: phylum
+      Node - Name: Mammalia, Rank: class
+        Node - Name: Rodentia, Rank: order
+          Node - Name: , Rank: family
+            Node - Name: , Rank: genus
+              Node - Name: Rodentia, Rank: species
+              Node - Name: Tragelaphus strepsiceros strepsiceros, Rank: species
+              Node - Name: Giraffa giraffa giraffa, Rank: species
+              Node - Name: Delphinapterus leucas, Rank: species
+              Node - Name: Procyon lotor, Rank: species
+              Node - Name: Ondatra zibethicus, Rank: species
+              Node - Name: Mephitis mephitis, Rank: species
+              Node - Name: Vespertilionidae, Rank: species
+              Node - Name: Sylvilagus floridanus, Rank: species
+              Node - Name: Tamias striatus, Rank: species
+              Node - Name: Microtus drummondii, Rank: species
+              Node - Name: Hippotragus niger niger, Rank: species
+
+Processing node 0:
+Name: 
+Rank: None
+
+Processing node 1:
+Name: Animalia
+Rank: kingdom
+
+Processing node 2:
+Name: Chordata
+Rank: phylum
+
+Processing node 3:
+Name: Mammalia
+Rank: class
+
+Processing node 4:
+Name: Rodentia
+Rank: order
+
+Processing node 5:
+Name: 
+Rank: family
+
+Processing node 6:
+Name: 
+Rank: genus
+
+Processing node 7:
+Name: Rodentia
+Rank: species
+
+Processing node 8:
+Name: Tragelaphus strepsiceros strepsiceros
+Rank: species
+
+Processing node 9:
+Name: Giraffa giraffa giraffa
+Rank: species
+
+Processing node 10:
+Name: Delphinapterus leucas
+Rank: species
+
+Processing node 11:
+Name: Procyon lotor
+Rank: species
+
+Processing node 12:
+Name: Ondatra zibethicus
+Rank: species
+
+Processing node 13:
+Name: Mephitis mephitis
+Rank: species
+
+Processing node 14:
+Name: Vespertilionidae
+Rank: species
+
+Processing node 15:
+Name: Sylvilagus floridanus
+Rank: species
+
+Processing node 16:
+Name: Tamias striatus
+Rank: species
+
+Processing node 17:
+Name: Microtus drummondii
+Rank: species
+
+Processing node 18:
+Name: Hippotragus niger niger
+Rank: species
