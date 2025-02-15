@@ -76,23 +76,44 @@ class DataProcessor:
         return df
 
     @staticmethod
-    def build_taxonomy_hierarchy(df: pd.DataFrame) -> Dict:
-        """Build a hierarchical taxonomy structure from the DataFrame."""
+    def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
+        """
+        Build hierarchical taxonomy with optional filtering by rank/taxon.
+        
+        Args:
+            df: DataFrame with taxonomic data
+            filter_rank: Taxonomic rank to filter by (e.g., 'class', 'order')
+            filter_taxon_id: ID of the taxon to filter by
+        """
         hierarchy = {}
-
+        
         for _, row in df.iterrows():
             current_level = hierarchy
+            ancestor_chain = []
+            
             for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
                 if pd.isna(row[rank]):
                     break
-
+                    
                 taxon_id = row[rank]
+                ancestor_chain.append((rank, taxon_id))
+                
+                matches_filter = (
+                    (filter_rank is None and filter_taxon_id is None) or
+                    (filter_rank == rank and filter_taxon_id == taxon_id) or
+                    any(ancestor[1] == filter_taxon_id for ancestor in ancestor_chain)
+                )
+                
+                if not matches_filter:
+                    continue
+                    
                 if taxon_id not in current_level:
                     current_level[taxon_id] = {
                         "name": row["name"] if rank == "species" else "",
                         "common_name": row["common_name"] if rank == "species" else "",
+                        "rank": rank,
                         "children": {}
                     }
                 current_level = current_level[taxon_id]["children"]
-
+        
         return hierarchy
