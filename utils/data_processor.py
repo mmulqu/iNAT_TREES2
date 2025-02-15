@@ -40,30 +40,29 @@ class DataProcessor:
                 taxon = obs["taxon"]
                 ancestors = taxon.get("ancestors", [])
                 
-                # Create a mapping of rank to ancestor name for easier lookup
+                # Create mappings for both IDs and names
                 ancestor_names = {}
+                ancestor_ids_by_rank = {}
                 for ancestor in ancestors:
                     if ancestor.get("rank") and ancestor.get("name"):
                         ancestor_names[ancestor["rank"]] = ancestor["name"]
+                        ancestor_ids_by_rank[ancestor["rank"]] = ancestor["id"]
                 
-                # Create a padded version of ancestor_ids
-                ancestor_ids = taxon.get("ancestor_ids", [])
-                if not isinstance(ancestor_ids, list):
-                    continue
-                    
-                padded_ancestors = ancestor_ids + [None] * 7  # Ensure we have enough elements
-
+                # Get actual family and genus from ancestors
+                family_id = ancestor_ids_by_rank.get("family")
+                genus_id = ancestor_ids_by_rank.get("genus")
+                
                 processed_data.append({
                     "observation_id": obs["id"],
                     "taxon_id": taxon["id"],
                     "name": taxon["name"],
                     "rank": taxon["rank"],
-                    "kingdom": padded_ancestors[0],
-                    "phylum": padded_ancestors[1],
-                    "class": padded_ancestors[2],
-                    "order": padded_ancestors[3],
-                    "family": padded_ancestors[4],
-                    "genus": padded_ancestors[5],
+                    "kingdom": ancestor_ids_by_rank.get("kingdom"),
+                    "phylum": ancestor_ids_by_rank.get("phylum"),
+                    "class": ancestor_ids_by_rank.get("class"),
+                    "order": ancestor_ids_by_rank.get("order"),
+                    "family": family_id,
+                    "genus": genus_id,
                     "species": taxon["id"],
                     "common_name": taxon.get("preferred_common_name", ""),
                     "observed_on": obs.get("observed_on"),
