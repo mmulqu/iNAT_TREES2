@@ -23,17 +23,18 @@ class DataProcessor:
             if not ancestor_ids or len(ancestor_ids) < 2:  # Need at least kingdom level
                 continue
                 
+            ancestor_ids = taxon.get("ancestor_ids", [])
             processed_data.append({
                 "observation_id": obs["id"],
                 "taxon_id": taxon["id"],
                 "name": taxon["name"],
                 "rank": taxon["rank"],
-                "kingdom": next(iter(taxon.get("ancestor_ids", [])), None),
-                "phylum": next(iter(taxon.get("ancestor_ids", [])[1:]), None),
-                "class": next(iter(taxon.get("ancestor_ids", [])[2:]), None),
-                "order": next(iter(taxon.get("ancestor_ids", [])[3:]), None),
-                "family": next(iter(taxon.get("ancestor_ids", [])[4:]), None),
-                "genus": next(iter(taxon.get("ancestor_ids", [])[5:]), None),
+                "kingdom": ancestor_ids[0] if len(ancestor_ids) > 0 else None,
+                "phylum": ancestor_ids[1] if len(ancestor_ids) > 1 else None,
+                "class": ancestor_ids[2] if len(ancestor_ids) > 2 else None,
+                "order": ancestor_ids[3] if len(ancestor_ids) > 3 else None,
+                "family": ancestor_ids[4] if len(ancestor_ids) > 4 else None,
+                "genus": ancestor_ids[5] if len(ancestor_ids) > 5 else None,
                 "species": taxon["id"],
                 "common_name": taxon.get("preferred_common_name", ""),
                 "observed_on": obs.get("observed_on"),
