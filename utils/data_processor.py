@@ -22,6 +22,14 @@ class DataProcessor:
     @staticmethod
     def process_observations(observations: List[Dict], taxonomic_group: Optional[str] = None) -> pd.DataFrame:
         """Process raw observations into a structured DataFrame."""
+        if observations:
+            print("\nFirst observation ancestors:")
+            first_obs = observations[0]
+            print("Taxon:", first_obs["taxon"]["name"])
+            print("Ancestors:")
+            for ancestor in first_obs["taxon"].get("ancestors", []):
+                print(f"  {ancestor['rank']}: {ancestor['name']}")
+                
         processed_data = []
 
         for obs in observations:
@@ -89,10 +97,17 @@ class DataProcessor:
         """
         # Debug print to see what data we have
         print("\nDataFrame columns:", df.columns.tolist())
-        print("\nSample row taxon names:")
+        print("\nSample row full data:")
         sample_row = df.iloc[0]
+        print(sample_row)
+
+        print("\nSample row taxon names:")
         for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
-            print(f"{rank}: ID = {sample_row[rank]}, Name = {sample_row[f'taxon_{rank}']}")
+            if rank == "species":
+                name = sample_row["name"]
+            else:
+                name = sample_row[f"taxon_{rank}"]
+            print(f"{rank}: ID = {sample_row[rank]}, Name = {name}")
             
         hierarchy = {}
         
