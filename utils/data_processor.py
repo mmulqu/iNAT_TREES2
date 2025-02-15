@@ -13,56 +13,6 @@ class DataProcessor:
 
     @staticmethod
     def process_observations(observations: List[Dict], taxonomic_group: Optional[str] = None) -> pd.DataFrame:
-        """Process raw observations into a structured DataFrame."""
-        processed_data = []
-
-        for obs in observations:
-            try:
-                if not obs.get("taxon") or not obs.get("id"):
-                    continue
-
-                taxon = obs["taxon"]
-                ancestor_ids = taxon.get("ancestor_ids", [])
-
-                # More defensive check of ancestor_ids
-                if not isinstance(ancestor_ids, list):
-                    continue
-
-                # Create a padded version of ancestor_ids
-                padded_ancestors = ancestor_ids + [None] * 7  # Ensure we have enough elements
-
-                processed_data.append({
-                    "observation_id": obs["id"],
-                    "taxon_id": taxon["id"],
-                    "name": taxon["name"],
-                    "rank": taxon["rank"],
-                    "kingdom": padded_ancestors[0],
-                    "phylum": padded_ancestors[1],
-                    "class": padded_ancestors[2],
-                    "order": padded_ancestors[3],
-                    "family": padded_ancestors[4],
-                    "genus": padded_ancestors[5],
-                    "species": taxon["id"],
-                    "common_name": taxon.get("preferred_common_name", ""),
-                    "observed_on": obs.get("observed_on"),
-                    "photo_url": obs.get("photos", [{}])[0].get("url", ""),
-                    "taxon_kingdom": taxon.get("kingdom_name", ""),
-                    "taxon_class": taxon.get("class_name", "")
-                })
-
-            except Exception as e:
-                print(f"Error processing observation {obs.get('id')}: {str(e)}")
-                print(f"ancestor_ids: {taxon.get('ancestor_ids')}")
-                continue
-
-        df = pd.DataFrame(processed_data)
-
-        # Filtering is now handled at the API level
-
-        return df
-
-    @staticmethod
-    def process_observations(observations: List[Dict]) -> pd.DataFrame:
         """Process observations with complete taxonomic information."""
         processed_data = []
         
