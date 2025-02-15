@@ -1,0 +1,77 @@
+Ah yes! Looking at the flow of data:
+
+1. From iNaturalist API, each taxon has a unique ID and each level in the ancestry has its own ID
+2. In `build_taxonomy_hierarchy`, we use these IDs as keys:
+```python
+current_level[taxon_id] = {
+    "name": row[f"taxon_{rank}"] if rank != "species" else row["name"],
+    ...
+}
+```
+
+3. The issue might be in `create_tree_structure` where we're losing the connection to the taxon IDs. Let's modify it:
+
+```python
+@staticmethod
+def create_tree_structure(hierarchy: Dict) -> Tuple[Dict, Dict]:
+    nodes = {}
+    edges = []
+    node_counter = 0
+
+    def traverse(node: Dict, parent_id: int = None) -> int:
+        nonlocal node_counter
+        current_id = node_counter
+        node_counter += 1
+
+        # Store node information WITH the taxon ID as key
+        nodes[current_id] = {
+            "name": node.get("name", ""),
+            "common_name": node.get("common_name", ""),
+            "rank": node.get("rank", ""),
+            "taxon_id": list(node["children"].keys())[0] if node["children"] else None  # Store the actual taxon ID
+        }
+
+        if parent_id is not None:
+            edges.append((parent_id, current_id))
+
+        for child in node["children"].values():
+            traverse(child, current_id)
+
+        return current_id
+
+    traverse({"children": hierarchy, "name": "", "common_name": "", "rank": ""})
+    return nodes, edges
+```
+
+Then in the visualization:
+
+```python
+# Add nodes and hover text for higher taxonomic ranks (non-species)
+for node_id, node_info in nodes.items():
+    if node_info.get("rank") != "species":
+        name = node_info.get("name", "")
+        rank = node_info.get("rank", "").title()
+        
+        # Create hover text that includes both name and rank
+        hover_text = f"{name} ({rank})" if name else rank
+        
+        fig.add_trace(go.Scatter(
+            x=[pos[node_id][0]],
+            y=[pos[node_id][1]],
+            mode="markers",
+            marker=dict(
+                size=6,
+                color="#2E7D32"
+            ),
+            hoverinfo="text",
+            text=hover_text,  # Use the formatted hover text
+            showlegend=False
+        ))
+```
+
+This should:
+1. Preserve the actual iNaturalist taxon IDs through the tree building process
+2. Make sure each node has its proper name from the taxonomy
+3. Show both the taxon name and rank on hover
+
+Let me know if you still see any issues with the hover text!
