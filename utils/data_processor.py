@@ -47,7 +47,11 @@ class DataProcessor:
                     "observed_on": obs.get("observed_on"),
                     "photo_url": obs.get("photos", [{}])[0].get("url", ""),
                     "taxon_kingdom": taxon.get("kingdom_name", ""),
-                    "taxon_class": taxon.get("class_name", "")
+                    "taxon_phylum": taxon.get("phylum_name", ""),
+                    "taxon_class": taxon.get("class_name", ""),
+                    "taxon_order": taxon.get("order_name", ""),
+                    "taxon_family": taxon.get("family_name", ""),
+                    "taxon_genus": taxon.get("genus_name", "")
                 })
 
             except Exception as e:
@@ -95,7 +99,7 @@ class DataProcessor:
                     
                 if taxon_id not in current_level:
                     current_level[taxon_id] = {
-                        "name": row["name"] if rank == "species" else "",
+                        "name": row[f"taxon_{rank}"] if rank != "species" else row["name"],
                         "common_name": row["common_name"] if rank == "species" else "",
                         "rank": rank,
                         "children": {}
