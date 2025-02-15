@@ -8,10 +8,21 @@ class DataProcessor:
         processed_data = []
         
         for obs in observations:
-            if not obs.get("taxon"):
+            # Skip invalid observations
+            if not obs.get("taxon") or not obs.get("id"):
                 continue
                 
             taxon = obs["taxon"]
+            
+            # Skip if taxon is at root level (Life) or missing crucial data
+            if taxon.get("rank") == "life" or not taxon.get("ancestor_ids"):
+                continue
+                
+            # Skip if ancestor_ids is empty or invalid
+            ancestor_ids = taxon.get("ancestor_ids", [])
+            if not ancestor_ids or len(ancestor_ids) < 2:  # Need at least kingdom level
+                continue
+                
             processed_data.append({
                 "observation_id": obs["id"],
                 "taxon_id": taxon["id"],
