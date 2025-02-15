@@ -120,8 +120,10 @@ class TreeBuilder:
                 
                 fig.add_trace(go.Scatter(
                     x=[px],
-                    y=[cy],
-                    mode="markers",
+                    y=[py],
+                    mode="markers+text",
+                    text=label,
+                    textposition="middle right",
                     marker=dict(
                         size=6,
                         color="#2E7D32"
