@@ -1,0 +1,94 @@
+I see the issue in your code. The problem is in the edge labeling section. When adding rank labels, you're trying to access the rank from nodes[parent] but your nodes dictionary doesn't contain the rank information. Here's how to fix it:
+
+```python
+# Modify your create_tree_structure method to include rank information:
+def create_tree_structure(hierarchy: Dict) -> Tuple[Dict, Dict]:
+    """Convert hierarchy to a format suitable for plotting."""
+    nodes = {}
+    edges = []
+    node_counter = 0
+
+    def traverse(node: Dict, parent_id: int = None) -> int:
+        nonlocal node_counter
+        current_id = node_counter
+        node_counter += 1
+
+        # Store node information - add rank to stored info
+        nodes[current_id] = {
+            "name": node.get("name", ""),
+            "common_name": node.get("common_name", ""),
+            "rank": node.get("rank", "")  # Add rank information
+        }
+
+        # Add edge from parent if exists
+        if parent_id is not None:
+            edges.append((parent_id, current_id))
+
+        # Process children
+        for child in node["children"].values():
+            traverse(child, current_id)
+
+        return current_id
+
+    traverse({"children": hierarchy, "name": "", "common_name": "", "rank": ""})
+
+    return nodes, edges
+```
+
+Then modify the edge labeling section:
+
+```python
+# In create_plotly_tree, modify the edge section:
+for parent, child in edges:
+    px, py = pos[parent]
+    cx, cy = pos[child]
+    
+    # Create right-angled path
+    path_x = [px, px, cx]
+    path_y = [py, cy, cy]
+    
+    # Calculate line length for label size
+    line_length = abs(cy - py) + abs(cx - px)
+    
+    fig.add_trace(go.Scatter(
+        x=path_x,
+        y=path_y,
+        mode="lines",
+        line=dict(
+            color="#2E7D32",
+            width=1
+        ),
+        hoverinfo="skip",
+        showlegend=False
+    ))
+    
+    # Add rank labels for order and family with varying sizes
+    parent_rank = nodes[parent]["rank"]
+    if parent_rank in ["order", "family"]:
+        label_size = min(14 + (line_length * 10), 24)  # Adjusted scaling factor
+        mid_x = px + (cx - px) / 2
+        mid_y = (py + cy) / 2  # Center vertically between parent and child
+        
+        fig.add_trace(go.Scatter(
+            x=[mid_x],
+            y=[mid_y],
+            mode="text",
+            text=[parent_rank.title()],
+            textposition="middle right",  # Changed to middle right
+            textfont=dict(
+                size=label_size,
+                color="#2E7D32"  # Match line color
+            ),
+            hoverinfo="skip",
+            showlegend=False
+        ))
+```
+
+Key changes:
+1. Added rank to the node information storage
+2. Adjusted label positioning to be centered on the vertical part of the line
+3. Modified the size scaling factor for better visibility
+4. Changed text position to "middle right"
+5. Added color to match the lines
+
+Let me know if you'd like me to suggest any other improvements to the label visualization!
