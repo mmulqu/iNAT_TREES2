@@ -1,0 +1,66 @@
+In your current code, we're using the ancestor_ids from the iNaturalist API response to build the tree structure - basically a list of IDs representing the taxonomic lineage of each observation. Let me look at what other taxonomic data iNaturalist provides that we might be able to use:
+
+From a standard observation response:
+
+pythonCopy{
+    "taxon": {
+        "ancestor_ids": [1, 2, 3...],  # What we're currently using
+        "ancestors": [  # Full ancestor objects we could use instead
+            {
+                "id": 1,
+                "name": "Animalia",
+                "rank": "kingdom",
+                "rank_level": 70
+            },
+            # ... more ancestors
+        ],
+        "rank_level": 10,  # Numerical rank (could help with proper tree levels)
+        "iconic_taxon_id": 1,  # High-level grouping (e.g., "Plants", "Insects")
+        "iconic_taxon_name": "Animalia",
+        "parent_id": 123,  # Direct parent taxon
+        "name": "Species name",
+        "rank": "species"
+    }
+}
+Ah! We're not using some valuable data here - particularly:
+
+The full ancestors array which includes names and ranks
+The rank_level which could help with proper tree depth
+iconic_taxon_id which could help with major branch organization
+
+We could modify the data processing to use this richer information:
+pythonCopydef process_observations(observations: List[Dict]) -> pd.DataFrame:
+    processed_data = []
+    
+    for obs in observations:
+        if not obs.get("taxon") or not obs.get("id"):
+            continue
+            
+        taxon = obs["taxon"]
+        ancestors = taxon.get("ancestors", [])
+        
+        # Create a more complete taxonomic record
+        taxon_data = {
+            "observation_id": obs["id"],
+            "taxon_id": taxon["id"],
+            "name": taxon["name"],
+            "rank": taxon["rank"],
+            "rank_level": taxon["rank_level"],
+            "iconic_taxon_id": taxon.get("iconic_taxon_id"),
+            "iconic_taxon_name": taxon.get("iconic_taxon_name"),
+        }
+        
+        # Add ancestor data with proper ranks
+        for ancestor in ancestors:
+            rank = ancestor["rank"]
+            taxon_data[rank] = ancestor["id"]
+            taxon_data[f"{rank}_name"] = ancestor["name"]
+            taxon_data[f"{rank}_level"] = ancestor["rank_level"]
+            
+        processed_data.append(taxon_data)
+This richer data could help build a more accurate tree because:
+
+We'd have actual rank levels rather than assuming depth
+We'd have the proper taxonomic names at each level
+We could use iconic taxa for major branch organization
+The rank_level values could inform proper branch lengths
