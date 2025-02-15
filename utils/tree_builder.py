@@ -116,7 +116,7 @@ class TreeBuilder:
             ))
             
             # Add rank labels for order and family with varying sizes
-            if node_id in nodes and nodes[node_id].get("rank") in ["order", "family"]:
+            if parent in nodes and nodes[parent].get("rank") in ["order", "family"]:
                 label_size = min(14 + (line_length * 2), 24)  # Scale size between 14 and 24
                 mid_x = px + (cx - px) / 2
                 mid_y = cy
