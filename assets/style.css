@@ -1,0 +1,38 @@
+/* Custom styles for the Streamlit app */
+.stApp {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.main-header {
+    color: #2E7D32;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+.subheader {
+    color: #1B5E20;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.info-box {
+    background-color: #F0F4F1;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid #2E7D32;
+}
+
+.error-box {
+    background-color: #FFEBEE;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid #C62828;
+}
+
+/* Loading animation */
+.stSpinner > div {
+    border-color: #2E7D32 !important;
+}
