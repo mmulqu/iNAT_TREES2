@@ -103,6 +103,10 @@ class TreeBuilder:
             # Calculate line length for label size
             line_length = abs(cy - py) + abs(cx - px)
             
+            # Get parent's rank for hover text
+            parent_rank = nodes[parent].get("rank", "")
+            hover_text = f"{parent_rank.title()} level" if parent_rank else ""
+            
             fig.add_trace(go.Scatter(
                 x=path_x,
                 y=path_y,
@@ -111,30 +115,14 @@ class TreeBuilder:
                     color="#2E7D32",
                     width=1
                 ),
-                hoverinfo="skip",
+                hoverinfo="text",
+                hovertext=hover_text,
                 showlegend=False
             ))
-            
-            # Add rank labels for order and family with varying sizes
-            if parent in nodes and nodes[parent].get("rank") in ["order", "family"]:
-                label_size = min(14 + (line_length * 2), 24)  # Scale size between 14 and 24
-                mid_x = px + (cx - px) / 2
-                mid_y = cy
-                
-                fig.add_trace(go.Scatter(
-                    x=[mid_x],
-                    y=[mid_y],
-                    mode="text",
-                    text=[nodes[node_id]["rank"].title()],
-                    textposition="top center",
-                    textfont=dict(size=label_size),
-                    hoverinfo="skip",
-                    showlegend=False
-                ))
 
         # Add nodes and labels
         for node_id, node_info in nodes.items():
-            if node_info["name"]:  # Only add labels for named nodes
+            if node_info["name"] and node_info.get("rank") == "species":  # Only label species
                 label = f"{node_info['name']}"
                 if node_info["common_name"]:
                     label += f"<br>{node_info['common_name']}"
