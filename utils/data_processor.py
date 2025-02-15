@@ -79,7 +79,7 @@ class DataProcessor:
         if taxonomic_group and taxonomic_group in DataProcessor.TAXONOMIC_FILTERS:
             filter_criteria = DataProcessor.TAXONOMIC_FILTERS[taxonomic_group]
             for rank, value in filter_criteria.items():
-                df = df[df[f"{rank}_name"] == value]
+                df = df[df[f"{rank}_name"].fillna('').str.lower() == value.lower()]
         
         return df
 
