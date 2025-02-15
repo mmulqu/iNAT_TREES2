@@ -35,11 +35,11 @@ class Database:
         with self.conn.cursor() as cur:
             cur.execute("""
             CREATE TABLE IF NOT EXISTS taxa (
-                id INTEGER PRIMARY KEY,
+                taxon_id INTEGER PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 rank VARCHAR(50) NOT NULL,
                 common_name VARCHAR(255),
-                parent_id INTEGER,
+                ancestor_ids INTEGER[],
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -100,16 +100,16 @@ class Database:
 
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("""
-            SELECT id, name, rank, common_name, parent_id
+            SELECT taxon_id, name, rank, common_name, ancestor_ids
             FROM taxa
-            WHERE id = %s
+            WHERE taxon_id = %s
             """, (taxon_id,))
             result = cur.fetchone()
             if result:
                 return dict(result)
         return None
 
-    def save_taxon(self, taxon_id: int, name: str, rank: str, common_name: Optional[str] = None, parent_id: Optional[int] = None):
+    def save_taxon(self, taxon_id: int, name: str, rank: str, common_name: Optional[str] = None, ancestor_ids: Optional[List[int]] = None):
         """Save taxon information to the database."""
         self.connect()
         if not self.conn:
@@ -117,12 +117,12 @@ class Database:
 
         with self.conn.cursor() as cur:
             cur.execute("""
-            INSERT INTO taxa (id, name, rank, common_name, parent_id)
+            INSERT INTO taxa (taxon_id, name, rank, common_name, ancestor_ids)
             VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE
+            ON CONFLICT (taxon_id) DO UPDATE
             SET name = EXCLUDED.name,
                 rank = EXCLUDED.rank,
                 common_name = EXCLUDED.common_name,
-                parent_id = EXCLUDED.parent_id
-            """, (taxon_id, name, rank, common_name, parent_id))
+                ancestor_ids = EXCLUDED.ancestor_ids
+            """, (taxon_id, name, rank, common_name, ancestor_ids))
             self.conn.commit()
