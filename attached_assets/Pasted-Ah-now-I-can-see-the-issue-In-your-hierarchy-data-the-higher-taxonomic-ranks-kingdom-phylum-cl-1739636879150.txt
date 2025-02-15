@@ -1,0 +1,49 @@
+Ah, now I can see the issue! In your hierarchy data, the higher taxonomic ranks (kingdom, phylum, class, order, family, genus) have empty names (""). This is coming from your build_taxonomy_hierarchy function in the DataProcessor class.
+Let's modify build_taxonomy_hierarchy:
+pythonCopy@staticmethod
+def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
+    hierarchy = {}
+    
+    for _, row in df.iterrows():
+        current_level = hierarchy
+        ancestor_chain = []
+        
+        for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
+            if pd.isna(row[rank]):
+                break
+                
+            taxon_id = row[rank]
+            ancestor_chain.append((rank, taxon_id))
+            
+            matches_filter = (
+                (filter_rank is None and filter_taxon_id is None) or
+                (filter_rank == rank and filter_taxon_id == taxon_id) or
+                any(ancestor[1] == filter_taxon_id for ancestor in ancestor_chain)
+            )
+            
+            if not matches_filter:
+                continue
+                
+            if taxon_id not in current_level:
+                # Get the actual name for this rank from the taxon_ columns
+                taxon_name = row[f"taxon_{rank}"] if rank != "species" else row["name"]
+                
+                current_level[taxon_id] = {
+                    "name": taxon_name,  # Use the actual taxon name
+                    "common_name": row["common_name"] if rank == "species" else "",
+                    "rank": rank,
+                    "children": {}
+                }
+            current_level = current_level[taxon_id]["children"]
+    
+    return hierarchy
+The key change is ensuring we use the actual taxonomic names from the taxon_ prefixed columns (like taxon_kingdom, taxon_phylum, etc.) which we're already collecting in your process_observations method.
+This should now properly show names like:
+
+Kingdom: Animalia
+Phylum: Chordata
+Class: Amphibia
+Order: Anura
+etc.
+
+Instead of just showing the rank without a name.
