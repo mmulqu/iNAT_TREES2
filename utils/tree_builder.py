@@ -43,38 +43,72 @@ class TreeBuilder:
         """Create an interactive phylogenetic tree visualization using Plotly."""
         nodes, edges = TreeBuilder.create_tree_structure(hierarchy)
 
-        # Calculate node positions using a simple layered layout
+        # Build graph structure for traversal
         G = {i: [] for i in nodes.keys()}
         for parent, child in edges:
             G[parent].append(child)
 
-        # Calculate positions
+        # Calculate positions with improved bottom-up approach
         pos = {}
-        def calculate_positions(node_id, x=0, y=0, dx=1):
-            pos[node_id] = (x, y)
+        
+        def get_leaf_count(node_id):
+            """Get count of leaf nodes under this node"""
             children = G[node_id]
-            n_children = len(children)
-            if n_children > 0:
-                new_dx = dx * 0.5
-                total_width = (n_children - 1) * dx
-                start_y = y - total_width / 2
-                for i, child in enumerate(children):
-                    new_y = start_y + i * dx
-                    calculate_positions(child, x + 1, new_y, new_dx)
+            if not children:
+                return 1
+            return sum(get_leaf_count(child) for child in children)
+            
+        def calculate_positions(node_id, x=0, y_start=0, vertical_spacing=1):
+            """Calculate x,y positions bottom-up"""
+            children = G[node_id]
+            
+            if not children:
+                # Leaf node
+                pos[node_id] = (x, y_start)
+                return y_start + vertical_spacing
+                
+            # Calculate children positions
+            current_y = y_start
+            child_x = x + 1  # Horizontal spacing
+            
+            # Position each child and collect their y-coordinates
+            child_y_positions = []
+            for child in children:
+                next_y = calculate_positions(child, child_x, current_y, vertical_spacing)
+                child_y_positions.append(pos[child][1])
+                current_y = next_y
+            
+            # Position this node at average of children's y-coordinates
+            pos[node_id] = (x, sum(child_y_positions) / len(child_y_positions))
+            
+            return current_y
 
-        # Start layout calculation from root
-        calculate_positions(0)
+        # Start positioning from root with adjusted spacing
+        leaf_count = get_leaf_count(0)
+        vertical_spacing = 2 / (leaf_count + 1)  # Adjust spacing based on number of leaves
+        calculate_positions(0, vertical_spacing=vertical_spacing)
 
         # Create figure
         fig = go.Figure()
 
-        # Add edges
+        # Add curved edges
         for parent, child in edges:
+            px, py = pos[parent]
+            cx, cy = pos[child]
+            # Create curved path using control points
+            path_x = [px, (px + cx)/2, (px + cx)/2, cx]
+            path_y = [py, py, cy, cy]
+            
             fig.add_trace(go.Scatter(
-                x=[pos[parent][0], pos[child][0]],
-                y=[pos[parent][1], pos[child][1]],
+                x=path_x,
+                y=path_y,
                 mode="lines",
-                line=dict(color="#2E7D32", width=1),
+                line=dict(
+                    color="#2E7D32", 
+                    width=1,
+                    shape='spline',
+                    smoothing=1
+                ),
                 hoverinfo="skip",
                 showlegend=False
             ))
