@@ -1,0 +1,71 @@
+I see the issue. To properly filter by taxonomic rank, we need to track and check the full ancestry chain when building the hierarchy. Here's how we can modify the code:
+
+```python
+def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
+    """
+    Build hierarchical taxonomy with optional filtering by rank/taxon.
+    
+    Args:
+        df: DataFrame with taxonomic data
+        filter_rank: Taxonomic rank to filter by (e.g., 'class', 'order')
+        filter_taxon_id: ID of the taxon to filter by
+    """
+    hierarchy = {}
+    
+    for _, row in df.iterrows():
+        current_level = hierarchy
+        ancestor_chain = []
+        
+        # Build ancestor chain for this observation
+        for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
+            if pd.isna(row[rank]):
+                break
+                
+            taxon_id = row[rank]
+            ancestor_chain.append((rank, taxon_id))
+            
+            # Check if this node matches our filter criteria
+            matches_filter = (
+                (filter_rank is None and filter_taxon_id is None) or  # No filter
+                (filter_rank == rank and filter_taxon_id == taxon_id) or  # Direct match
+                any(ancestor[1] == filter_taxon_id for ancestor in ancestor_chain)  # Is descendant
+            )
+            
+            if not matches_filter:
+                continue
+                
+            # Add node to hierarchy
+            if taxon_id not in current_level:
+                current_level[taxon_id] = {
+                    "name": row["name"] if rank == "species" else "",
+                    "common_name": row["common_name"] if rank == "species" else "",
+                    "rank": rank,  # Store the rank for reference
+                    "children": {}
+                }
+            current_level = current_level[taxon_id]["children"]
+    
+    return hierarchy
+```
+
+Then in your main code you can use it like:
+
+```python
+# Example usage:
+# Get all birds (Class Aves has taxon_id 3)
+bird_hierarchy = build_taxonomy_hierarchy(df, filter_rank="class", filter_taxon_id=3)
+
+# Get all insects (Class Insecta has taxon_id 47158)
+insect_hierarchy = build_taxonomy_hierarchy(df, filter_rank="class", filter_taxon_id=47158)
+```
+
+Key changes:
+1. Added filter parameters for rank and taxon_id
+2. Track the full ancestor chain while building
+3. Check each node against filter criteria:
+   - No filter = include everything
+   - Direct match = include if node matches filter exactly
+   - Descendant = include if node's ancestors include filter taxon
+
+This should properly filter observations by taxonomic rank while maintaining the hierarchical structure. For example, if you filter by Class Aves, you'll get all birds including orders, families, genera, and species within that class.
+
+Let me know if you'd like me to add any additional filtering capabilities or if you need help with testing the filters!
