@@ -20,8 +20,7 @@ class TreeBuilder:
             # Store node information
             nodes[current_id] = {
                 "name": node.get("name", ""),
-                "common_name": node.get("common_name", ""),
-                "rank": node.get("rank", "")
+                "common_name": node.get("common_name", "")
             }
 
             # Add edge from parent if exists
@@ -117,22 +116,18 @@ class TreeBuilder:
             ))
             
             # Add rank labels for order and family with varying sizes
-            parent_rank = nodes[parent].get("rank", "")
-            if parent_rank in ["order", "family"]:
-                label_size = min(14 + (line_length * 10), 24)  # Adjusted scaling
+            if parent in nodes and nodes[parent].get("rank") in ["order", "family"]:
+                label_size = min(14 + (line_length * 2), 24)  # Scale size between 14 and 24
                 mid_x = px + (cx - px) / 2
-                mid_y = (py + cy) / 2  # Center between parent and child
+                mid_y = cy
                 
                 fig.add_trace(go.Scatter(
                     x=[mid_x],
                     y=[mid_y],
                     mode="text",
-                    text=[parent_rank.title()],
-                    textposition="middle right",
-                    textfont=dict(
-                        size=label_size,
-                        color="#2E7D32"
-                    ),
+                    text=[nodes[node_id]["rank"].title()],
+                    textposition="top center",
+                    textfont=dict(size=label_size),
                     hoverinfo="skip",
                     showlegend=False
                 ))
