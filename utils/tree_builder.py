@@ -48,37 +48,19 @@ class TreeBuilder:
         for parent, child in edges:
             G[parent].append(child)
 
-        # Calculate positions using rank levels for proper evolutionary distances
+        # Calculate positions
         pos = {}
-        
-        def get_rank_spacing(node_info):
-            rank_level = node_info.get("rank_level", 10)  # Default to species level
-            # Higher rank_level means higher up in taxonomy, so more spacing
-            return (100 - rank_level) * 3  # Scale factor for visual spacing
-        
-        def calculate_positions(node_id, x=0, y=0, level=0):
+        def calculate_positions(node_id, x=0, y=0, dx=1):
             pos[node_id] = (x, y)
             children = G[node_id]
             n_children = len(children)
-            
             if n_children > 0:
-                node_rank = nodes[node_id].get("rank", "species")
-                # Increase vertical spacing between nodes
-                base_spacing = 100
-                level_multiplier = 1.5 ** level  # Increase spacing exponentially with depth
-                spacing = base_spacing * level_multiplier
-                
-                # Calculate total height needed for children
-                total_height = spacing * (n_children - 1)
-                start_y = y - total_height / 2
-                
-                # Calculate x position based on taxonomic rank
-                x_increment = 300  # Larger fixed horizontal spacing
-                
+                new_dx = dx * 0.5
+                total_width = (n_children - 1) * dx
+                start_y = y - total_width / 2
                 for i, child in enumerate(children):
-                    new_y = start_y + i * spacing
-                    new_x = x + x_increment
-                    calculate_positions(child, new_x, new_y, level + 1)
+                    new_y = start_y + i * dx
+                    calculate_positions(child, x + 1, new_y, new_dx)
 
         # Start layout calculation from root
         calculate_positions(0)
@@ -121,22 +103,11 @@ class TreeBuilder:
             plot_bgcolor="white",
             paper_bgcolor="white",
             margin=dict(l=50, r=50, t=30, b=30),
-            xaxis=dict(
-                showgrid=False, 
-                zeroline=False, 
-                showticklabels=False,
-                range=[min(x[0] for x in pos.values()) - 100, max(x[0] for x in pos.values()) + 400]
-            ),
-            yaxis=dict(
-                showgrid=False, 
-                zeroline=False, 
-                showticklabels=False,
-                scaleanchor="x",
-                scaleratio=1
-            ),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             hovermode="closest",
-            height=1000,
-            width=1500
+            height=800,
+            width=1200
         )
 
         return fig
