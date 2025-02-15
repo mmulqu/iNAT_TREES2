@@ -10,7 +10,6 @@ class TreeBuilder:
         """Convert hierarchy to a format suitable for plotting."""
         nodes = {}
         edges = []
-        name_mapping = {}
         node_counter = 0
 
         def traverse(node: Dict, parent_id: int = None) -> int:
@@ -18,11 +17,15 @@ class TreeBuilder:
             current_id = node_counter
             node_counter += 1
 
-            # Store node information
+            # Get the taxon ID from the first child if this is not a leaf node
+            taxon_id = list(node["children"].keys())[0] if node["children"] else None
+
+            # Store node information with taxon ID
             nodes[current_id] = {
                 "name": node.get("name", ""),
                 "common_name": node.get("common_name", ""),
-                "rank": node.get("rank", "")
+                "rank": node.get("rank", ""),
+                "taxon_id": taxon_id
             }
 
             # Add edge from parent if exists
@@ -117,6 +120,12 @@ class TreeBuilder:
         # Add nodes and hover text for higher taxonomic ranks (non-species)
         for node_id, node_info in nodes.items():
             if node_info.get("rank") != "species":
+                name = node_info.get("name", "")
+                rank = node_info.get("rank", "").title()
+                taxon_id = node_info.get("taxon_id", "")
+                
+                hover_text = f"{name} ({rank})\nID: {taxon_id}" if name else f"{rank}\nID: {taxon_id}"
+                
                 fig.add_trace(go.Scatter(
                     x=[pos[node_id][0]],
                     y=[pos[node_id][1]],
@@ -126,7 +135,7 @@ class TreeBuilder:
                         color="#2E7D32"
                     ),
                     hoverinfo="text",
-                    text=node_info.get("name", ""),
+                    text=hover_text,
                     showlegend=False
                 ))
 
