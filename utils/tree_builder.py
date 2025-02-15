@@ -48,17 +48,13 @@ class TreeBuilder:
         for parent, child in edges:
             G[parent].append(child)
 
-        # Calculate positions with rank-based spacing
+        # Calculate positions using rank levels for proper evolutionary distances
         pos = {}
-        rank_spacing = {
-            "kingdom": 200,
-            "phylum": 150,
-            "class": 120,
-            "order": 100,
-            "family": 80,
-            "genus": 60,
-            "species": 40
-        }
+        
+        def get_rank_spacing(node_info):
+            rank_level = node_info.get("rank_level", 10)  # Default to species level
+            # Higher rank_level means higher up in taxonomy, so more spacing
+            return (100 - rank_level) * 3  # Scale factor for visual spacing
         
         def calculate_positions(node_id, x=0, y=0, level=0):
             pos[node_id] = (x, y)

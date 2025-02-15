@@ -62,19 +62,44 @@ class DataProcessor:
         return df
 
     @staticmethod
+    def process_observations(observations: List[Dict]) -> pd.DataFrame:
+        """Process observations with complete taxonomic information."""
+        processed_data = []
+        
+        for obs in observations:
+            if not obs.get("taxon") or not obs.get("id"):
+                continue
+                
+            taxon = obs["taxon"]
+            ancestors = taxon.get("ancestors", [])
+            
+            taxon_data = {
+                "observation_id": obs["id"],
+                "taxon_id": taxon["id"],
+                "name": taxon["name"],
+                "rank": taxon["rank"],
+                "rank_level": taxon["rank_level"],
+                "iconic_taxon_id": taxon.get("iconic_taxon_id"),
+                "iconic_taxon_name": taxon.get("iconic_taxon_name"),
+            }
+            
+            for ancestor in ancestors:
+                rank = ancestor["rank"]
+                taxon_data[rank] = ancestor["id"]
+                taxon_data[f"{rank}_name"] = ancestor["name"]
+                taxon_data[f"{rank}_level"] = ancestor["rank_level"]
+                
+            processed_data.append(taxon_data)
+            
+        return pd.DataFrame(processed_data)
+
+    @staticmethod
     def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
         """
-        Build hierarchical taxonomy with evolutionary distances and proper grouping.
+        Build hierarchical taxonomy with evolutionary distances based on rank levels.
         """
-        rank_distances = {
-            "kingdom": 4.0,
-            "phylum": 3.0,
-            "class": 2.5,
-            "order": 2.0,
-            "family": 1.5,
-            "genus": 1.0,
-            "species": 0.5
-        }
+        # Use rank_level for more accurate distances
+        rank_distances = lambda level: (100 - level) / 20.0  # Convert iNat rank levels to distances
         
         sorted_df = df.sort_values(by=["kingdom", "phylum", "class", "order", "family", "genus", "species"])
         hierarchy = {}
