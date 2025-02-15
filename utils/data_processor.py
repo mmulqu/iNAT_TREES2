@@ -87,6 +87,13 @@ class DataProcessor:
             filter_rank: Taxonomic rank to filter by (e.g., 'class', 'order')
             filter_taxon_id: ID of the taxon to filter by
         """
+        # Debug print to see what data we have
+        print("\nDataFrame columns:", df.columns.tolist())
+        print("\nSample row taxon names:")
+        sample_row = df.iloc[0]
+        for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
+            print(f"{rank}: ID = {sample_row[rank]}, Name = {sample_row[f'taxon_{rank}']}")
+            
         hierarchy = {}
         
         for _, row in df.iterrows():
@@ -112,6 +119,7 @@ class DataProcessor:
                 if taxon_id not in current_level:
                     # Get the actual name for this rank from the taxon_ columns
                     taxon_name = row[f"taxon_{rank}"] if rank != "species" else row["name"]
+                    print(f"Creating node for {rank}: ID={taxon_id}, Name={taxon_name}")  # Debug print
                     
                     current_level[taxon_id] = {
                         "name": taxon_name,  # Use the actual taxon name
@@ -120,5 +128,12 @@ class DataProcessor:
                         "children": {}
                     }
                 current_level = current_level[taxon_id]["children"]
+        
+        print("\nFinal hierarchy structure:")
+        def print_hierarchy(h, level=0):
+            for tid, node in h.items():
+                print("  " * level + f"{node['rank']}: {node['name']} (ID: {tid})")
+                print_hierarchy(node['children'], level + 1)
+        print_hierarchy(hierarchy)
         
         return hierarchy
