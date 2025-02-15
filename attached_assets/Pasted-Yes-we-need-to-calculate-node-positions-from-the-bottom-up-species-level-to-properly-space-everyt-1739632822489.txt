@@ -1,0 +1,102 @@
+Yes, we need to calculate node positions from the bottom up (species level) to properly space everything without overlapping lines. Each higher taxonomic level should be positioned based on the average position of its children, with enough vertical spacing between sibling groups.
+Here's how we could modify our approach:
+pythonCopydef calculate_tree_layout(hierarchy: Dict) -> Dict:
+    """Calculate node positions bottom-up to avoid line intersections"""
+    
+    def get_leaf_count(node):
+        """Get count of leaf nodes (species) under this node"""
+        if not node["children"]:
+            return 1
+        return sum(get_leaf_count(child) for child in node["children"].values())
+    
+    def calculate_positions(node, x_pos=0, y_start=0, vertical_spacing=50):
+        """Calculate x,y positions for each node and its children"""
+        # Get number of leaves under this node to calculate spacing
+        leaf_count = get_leaf_count(node)
+        
+        if not node["children"]:
+            # Leaf node (species)
+            node["x"] = x_pos
+            node["y"] = y_start
+            return y_start + vertical_spacing
+        
+        # Calculate children positions
+        current_y = y_start
+        child_x = x_pos + 120  # Horizontal spacing between levels
+        
+        # Position each child and get their y-coordinates
+        child_y_positions = []
+        for child in node["children"].values():
+            next_y = calculate_positions(child, child_x, current_y, vertical_spacing)
+            child_y_positions.append(child["y"])
+            current_y = next_y
+        
+        # Position this node at average of children's y-coordinates
+        node["x"] = x_pos
+        node["y"] = sum(child_y_positions) / len(child_y_positions)
+        
+        return current_y
+    
+    # Start positioning from root
+    calculate_positions(hierarchy)
+    return hierarchy
+And modify the visualization component to use these calculated positions:
+javascriptCopyconst TreeVisualizer = ({ data }) => {
+  // Draw branches using calculated positions
+  const renderBranches = (node) => {
+    if (!node.children) return null;
+    
+    return Object.values(node.children).map(child => (
+      <g key={`branch-${child.name}`}>
+        <path
+          d={`M ${node.x} ${node.y} 
+              C ${(node.x + child.x) / 2} ${node.y},
+                ${(node.x + child.x) / 2} ${child.y},
+                ${child.x} ${child.y}`}
+          fill="none"
+          stroke="#666"
+          strokeWidth="1"
+        />
+        {renderBranches(child)}
+      </g>
+    ));
+  };
+
+  // Draw nodes using calculated positions
+  const renderNodes = (node) => {
+    return (
+      <g key={`node-${node.name}`}>
+        <circle
+          cx={node.x}
+          cy={node.y}
+          r="4"
+          fill="#000"
+        />
+        <text
+          x={node.x + 10}
+          y={node.y}
+          dy=".3em"
+        >
+          {node.name}
+        </text>
+        {node.children && Object.values(node.children).map(child => renderNodes(child))}
+      </g>
+    );
+  };
+
+  return (
+    <svg width="1200" height="800">
+      <g transform="translate(50, 400)">
+        {renderBranches(data)}
+        {renderNodes(data)}
+      </g>
+    </svg>
+  );
+};
+Key improvements:
+
+Calculates position from bottom (species) up
+Uses leaf count to determine proper vertical spacing
+Positions parent nodes at the average y-coordinate of their children
+Maintains consistent horizontal spacing between taxonomic levels
+Ensures no branch intersections by reserving appropriate vertical space
