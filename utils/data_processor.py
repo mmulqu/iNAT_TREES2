@@ -117,12 +117,16 @@ class DataProcessor:
                     continue
                     
                 if taxon_id not in current_level:
-                    # Get the actual name for this rank from the taxon_ columns
-                    taxon_name = row[f"taxon_{rank}"] if rank != "species" else row["name"]
+                    # Handle species differently since it doesn't have a taxon_ prefix
+                    if rank == "species":
+                        taxon_name = row["name"]
+                    else:
+                        taxon_name = row[f"taxon_{rank}"]
+                        
                     print(f"Creating node for {rank}: ID={taxon_id}, Name={taxon_name}")  # Debug print
                     
                     current_level[taxon_id] = {
-                        "name": taxon_name,  # Use the actual taxon name
+                        "name": taxon_name,
                         "common_name": row["common_name"] if rank == "species" else "",
                         "rank": rank,
                         "children": {}
