@@ -6,22 +6,37 @@ class INaturalistAPI:
     BASE_URL = "https://api.inaturalist.org/v1"
     
     @staticmethod
-    def get_user_observations(username: str, per_page: int = 200) -> List[Dict]:
-        """Fetch observations for a given iNaturalist username."""
+    def get_user_observations(username: str, taxonomic_group: str = None, per_page: int = 200) -> List[Dict]:
+        """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
+        taxon_params = {
+            "Insects": "class=Insecta",
+            "Fungi": "kingdom=Fungi",
+            "Plants": "kingdom=Plantae",
+            "Mammals": "class=Mammalia",
+            "Reptiles": "class=Reptilia",
+            "Amphibians": "class=Amphibia"
+        }
+        
         observations = []
         page = 1
         
         while True:
             try:
+                params = {
+                    "user_login": username,
+                    "per_page": per_page,
+                    "page": page,
+                    "order": "desc",
+                    "order_by": "created_at"
+                }
+                
+                if taxonomic_group in taxon_params:
+                    taxon_filter = taxon_params[taxonomic_group].split('=')
+                    params[f"taxon_{taxon_filter[0]}"] = taxon_filter[1]
+                    
                 response = requests.get(
                     f"{INaturalistAPI.BASE_URL}/observations",
-                    params={
-                        "user_login": username,
-                        "per_page": per_page,
-                        "page": page,
-                        "order": "desc",
-                        "order_by": "created_at"
-                    }
+                    params=params
                 )
                 response.raise_for_status()
                 data = response.json()

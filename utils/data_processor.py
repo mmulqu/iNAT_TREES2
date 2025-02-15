@@ -57,21 +57,7 @@ class DataProcessor:
 
         df = pd.DataFrame(processed_data)
 
-        # Apply taxonomic filter if specified
-        if taxonomic_group and taxonomic_group in DataProcessor.TAXONOMIC_FILTERS:
-            filter_criteria = DataProcessor.TAXONOMIC_FILTERS[taxonomic_group]
-            
-            # Create mask for observations that match the taxonomic criteria
-            mask = pd.Series(False, index=df.index)
-            for field, value in filter_criteria.items():
-                if field == "kingdom":
-                    # Match both direct kingdom and kingdom_name
-                    mask |= (df["kingdom"] == value) | (df["taxon_kingdom"] == value)
-                elif field == "class":
-                    # Match both direct class and class_name
-                    mask |= (df["class"] == value) | (df["taxon_class"] == value)
-            
-            df = df[mask]
+        # Filtering is now handled at the API level
 
         return df
 

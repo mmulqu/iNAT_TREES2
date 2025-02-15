@@ -48,7 +48,8 @@ if username and run_button:
         # Fetch observations if not already in session state
         if not st.session_state.observations:
             with st.spinner("Fetching observations..."):
-                st.session_state.observations = INaturalistAPI.get_user_observations(username)
+                filter_group = None if taxonomic_group == "All Groups" else taxonomic_group
+                st.session_state.observations = INaturalistAPI.get_user_observations(username, filter_group)
 
         observations = st.session_state.observations
 
