@@ -7,14 +7,22 @@ class INaturalistAPI:
     BASE_URL = "https://api.inaturalist.org/v1"
 
     @staticmethod
-    def get_taxon_details(taxon_id: int) -> Optional[Dict]:
+    def get_taxon_details(taxon_id: int, include_ancestors: bool = False) -> Optional[Dict]:
         """Fetch detailed information about a specific taxon."""
-        # Check database first
         db = Database.get_instance()
-        cached_taxon = db.get_taxon(taxon_id)
-        if cached_taxon:
-            print(f"Found taxon {taxon_id} in database cache")
-            return cached_taxon
+        
+        # Check for cached branch first if ancestors are needed
+        if include_ancestors:
+            cached_branch = db.get_cached_branch(taxon_id)
+            if cached_branch:
+                print(f"Found cached branch for taxon {taxon_id}")
+                return cached_branch
+        else:
+            # Check for individual taxon cache
+            cached_taxon = db.get_taxon(taxon_id)
+            if cached_taxon:
+                print(f"Found taxon {taxon_id} in database cache")
+                return cached_taxon
 
         try:
             print(f"Fetching taxon {taxon_id} from API")
@@ -78,21 +86,34 @@ class INaturalistAPI:
 
                 # Process observations and fetch ancestor details
                 for obs in data["results"]:
-                    if "taxon" in obs and "ancestor_ids" in obs["taxon"]:
-                        ancestor_ids = obs["taxon"]["ancestor_ids"]
-
-                        # Fetch details for uncached taxa
-                        for taxon_id in ancestor_ids:
-                            taxon_details = INaturalistAPI.get_taxon_details(taxon_id)
-                            if not taxon_details:
-                                time.sleep(0.5)  # Rate limiting
-
-                        # Add ancestor details to the observation
-                        obs["taxon"]["ancestors"] = [
-                            INaturalistAPI.get_taxon_details(aid)
-                            for aid in ancestor_ids
-                            if INaturalistAPI.get_taxon_details(aid)
-                        ]
+                    if "taxon" in obs:
+                        taxon = obs["taxon"]
+                        species_id = taxon["id"]
+                        
+                        # Try to get cached branch first
+                        cached_branch = db.get_cached_branch(species_id)
+                        if cached_branch:
+                            obs["taxon"]["ancestors"] = cached_branch["ancestry"]
+                            continue
+                            
+                        # If not cached, fetch and cache the full branch
+                        if "ancestor_ids" in taxon:
+                            ancestor_ids = taxon["ancestor_ids"]
+                            ancestors = []
+                            
+                            for aid in ancestor_ids:
+                                ancestor = INaturalistAPI.get_taxon_details(aid)
+                                if ancestor:
+                                    ancestors.append(ancestor)
+                                    time.sleep(0.5)  # Rate limiting
+                            
+                            # Cache the branch
+                            branch_data = {
+                                "name": taxon["name"],
+                                "ancestry": ancestors
+                            }
+                            db.save_branch(species_id, branch_data)
+                            obs["taxon"]["ancestors"] = ancestors
 
                 observations.extend(data["results"])
 
