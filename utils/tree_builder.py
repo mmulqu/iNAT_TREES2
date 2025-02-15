@@ -116,20 +116,21 @@ class TreeBuilder:
             
             # Add node at branch point for higher taxonomic ranks
             if parent in nodes and nodes[parent].get("rank") != "species":
-                label = nodes[parent].get("name", nodes[parent].get("rank", ""))
+                rank = nodes[parent].get("rank", "")
+                name = nodes[parent].get("name", "")
+                
+                hover_text = f"{rank.title()}: {name}" if name else rank.title()
                 
                 fig.add_trace(go.Scatter(
                     x=[px],
                     y=[py],
-                    mode="markers+text",
-                    text=label,
-                    textposition="middle right",
+                    mode="markers",
                     marker=dict(
                         size=6,
                         color="#2E7D32"
                     ),
                     hoverinfo="text",
-                    hovertext=f"{nodes[parent]['name']}",
+                    hovertext=hover_text,
                     showlegend=False
                 ))
 
