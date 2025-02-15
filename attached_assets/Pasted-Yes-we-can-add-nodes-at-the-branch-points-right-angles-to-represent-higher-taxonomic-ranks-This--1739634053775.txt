@@ -1,0 +1,66 @@
+Yes, we can add nodes at the branch points (right angles) to represent higher taxonomic ranks! This would give users clear points to hover over and interact with. Here's how we can modify the code:
+pythonCopy# In create_plotly_tree, modify the edge section:
+for parent, child in edges:
+    px, py = pos[parent]
+    cx, cy = pos[child]
+    
+    # Create right-angled path
+    path_x = [px, px, cx]
+    path_y = [py, cy, cy]
+    
+    # Add the branch line without hover
+    fig.add_trace(go.Scatter(
+        x=path_x,
+        y=path_y,
+        mode="lines",
+        line=dict(
+            color="#2E7D32",
+            width=1
+        ),
+        hoverinfo="skip",
+        showlegend=False
+    ))
+    
+    # Add node at the right angle (branch point)
+    if nodes[parent]["rank"]:  # Only add if it has a rank
+        label = f"{nodes[parent]['rank'].title()}"
+        if nodes[parent]["name"]:
+            label += f"<br>{nodes[parent]['name']}"
+            
+        fig.add_trace(go.Scatter(
+            x=[px],  # Position at parent's x
+            y=[cy],  # Position at child's y (the corner)
+            mode="markers",
+            marker=dict(
+                size=6,  # Slightly smaller than species nodes
+                color="#2E7D32"
+            ),
+            hoverinfo="text",
+            hovertext=label,
+            showlegend=False
+        ))
+
+# Add species nodes (as before)
+for node_id, node_info in nodes.items():
+    if node_info["name"] and node_info.get("rank") == "species":
+        label = f"{node_info['name']}"
+        if node_info["common_name"]:
+            label += f"<br>{node_info['common_name']}"
+
+        fig.add_trace(go.Scatter(
+            x=[pos[node_id][0]],
+            y=[pos[node_id][1]],
+            mode="markers+text",
+            text=[label],
+            textposition="middle right",
+            hoverinfo="text",
+            marker=dict(size=8, color="#2E7D32"),
+            showlegend=False
+        ))
+This will:
+
+Keep the branch lines as simple visual elements
+Add small nodes at each right angle branch point
+Show hover text with the taxonomic rank (and name if available) when hovering over these branch points
+Keep the species nodes and labels as they were
+Use slightly smaller markers for the taxonomic rank nodes to differentiate them from species nodes
