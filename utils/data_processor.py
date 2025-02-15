@@ -60,11 +60,20 @@ class DataProcessor:
         # Apply taxonomic filter if specified
         if taxonomic_group and taxonomic_group in DataProcessor.TAXONOMIC_FILTERS:
             filter_criteria = DataProcessor.TAXONOMIC_FILTERS[taxonomic_group]
+            
+            # Create mask for observations that match either directly or through ancestry
+            mask = pd.Series(False, index=df.index)
             for field, value in filter_criteria.items():
                 if field == "kingdom":
-                    df = df[df["taxon_kingdom"] == value]
+                    mask |= (df["taxon_kingdom"] == value)
                 elif field == "class":
-                    df = df[df["taxon_class"] == value]
+                    # Check both direct class match and ancestry through taxon_class
+                    mask |= (df["taxon_class"] == value)
+                    # Include all descendants of this class
+                    class_entries = df[df["class"].notna()]
+                    mask |= class_entries["class"].apply(lambda x: any(anc == value for anc in class_entries["taxon_class"]))
+            
+            df = df[mask]
 
         return df
 
