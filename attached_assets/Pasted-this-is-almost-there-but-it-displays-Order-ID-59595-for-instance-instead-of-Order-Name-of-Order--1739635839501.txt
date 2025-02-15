@@ -1,0 +1,66 @@
+this is almost there but it displays Order ID: 59595 for instance instead of Order: <Name of Order>
+
+
+Ah! We need to reference the actual taxon names rather than the IDs. The issue is in how we're building the node information in the hierarchy. Let's modify create_tree_structure:
+
+python
+
+Copy
+@staticmethod
+def create_tree_structure(hierarchy: Dict) -> Tuple[Dict, Dict]:
+    nodes = {}
+    edges = []
+    node_counter = 0
+
+    def traverse(node: Dict, parent_id: int = None) -> int:
+        nonlocal node_counter
+        current_id = node_counter
+        node_counter += 1
+
+        # Store node information - store the name directly, not the ID
+        nodes[current_id] = {
+            "name": node.get("name", ""),  # This is the actual taxon name
+            "common_name": node.get("common_name", ""),
+            "rank": node.get("rank", "")
+        }
+
+        if parent_id is not None:
+            edges.append((parent_id, current_id))
+
+        # Process children
+        for child in node["children"].values():
+            traverse(child, current_id)
+
+        return current_id
+
+    # Start traversal with actual hierarchy data
+    traverse({"children": hierarchy, "name": "", "common_name": "", "rank": ""})
+
+    return nodes, edges
+And in the visualization part:
+
+python
+
+Copy
+# Add nodes and hover text for higher taxonomic ranks (non-species)
+for node_id, node_info in nodes.items():
+    if node_info.get("rank") != "species":
+        name = node_info.get("name", "")
+        rank = node_info.get("rank", "").title()
+        
+        # Only show the name (we already stored the actual taxon name, not the ID)
+        hover_text = name if name else rank
+        
+        fig.add_trace(go.Scatter(
+            x=[pos[node_id][0]],
+            y=[pos[node_id][1]],
+            mode="markers",
+            marker=dict(
+                size=6,
+                color="#2E7D32"
+            ),
+            hoverinfo="text",
+            text=hover_text,
+            showlegend=False
+        ))
+This should now show the actual taxonomic names (like "Lepidoptera" for Order) instead of the IDs. The key was ensuring we're storing and using the actual names from the hierarchy rather than the IDs.
