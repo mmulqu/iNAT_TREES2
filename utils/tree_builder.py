@@ -60,23 +60,29 @@ class TreeBuilder:
             "species": 40
         }
         
-        def calculate_positions(node_id, x=0, y=0, dx=1):
+        def calculate_positions(node_id, x=0, y=0, level=0):
             pos[node_id] = (x, y)
             children = G[node_id]
             n_children = len(children)
             
             if n_children > 0:
                 node_rank = nodes[node_id].get("rank", "species")
-                spacing = rank_spacing.get(node_rank, 40)
-                new_dx = dx * 0.7  # Reduced scaling factor for better spread
-                total_width = (n_children - 1) * spacing
-                start_y = y - total_width / 2
+                # Increase vertical spacing between nodes
+                base_spacing = 100
+                level_multiplier = 1.5 ** level  # Increase spacing exponentially with depth
+                spacing = base_spacing * level_multiplier
+                
+                # Calculate total height needed for children
+                total_height = spacing * (n_children - 1)
+                start_y = y - total_height / 2
+                
+                # Calculate x position based on taxonomic rank
+                x_increment = 300  # Larger fixed horizontal spacing
                 
                 for i, child in enumerate(children):
                     new_y = start_y + i * spacing
-                    # Use evolutionary distance for x-position if available
-                    new_x = x + (nodes[child].get("distance", 1) - nodes[node_id].get("distance", 0)) * 100
-                    calculate_positions(child, new_x, new_y, new_dx)
+                    new_x = x + x_increment
+                    calculate_positions(child, new_x, new_y, level + 1)
 
         # Start layout calculation from root
         calculate_positions(0)
@@ -119,11 +125,22 @@ class TreeBuilder:
             plot_bgcolor="white",
             paper_bgcolor="white",
             margin=dict(l=50, r=50, t=30, b=30),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            xaxis=dict(
+                showgrid=False, 
+                zeroline=False, 
+                showticklabels=False,
+                range=[min(x[0] for x in pos.values()) - 100, max(x[0] for x in pos.values()) + 400]
+            ),
+            yaxis=dict(
+                showgrid=False, 
+                zeroline=False, 
+                showticklabels=False,
+                scaleanchor="x",
+                scaleratio=1
+            ),
             hovermode="closest",
-            height=800,
-            width=1200
+            height=1000,
+            width=1500
         )
 
         return fig
