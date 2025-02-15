@@ -1,30 +1,42 @@
-
 import requests
 from typing import Dict, List, Optional
 import time
+from utils.database import Database
 
 class INaturalistAPI:
     BASE_URL = "https://api.inaturalist.org/v1"
-    taxon_cache = {}  # Class-level cache for taxon details
 
     @staticmethod
     def get_taxon_details(taxon_id: int) -> Optional[Dict]:
         """Fetch detailed information about a specific taxon."""
-        # Check cache first
-        if taxon_id in INaturalistAPI.taxon_cache:
-            return INaturalistAPI.taxon_cache[taxon_id]
+        # Check database first
+        db = Database.get_instance()
+        cached_taxon = db.get_taxon(taxon_id)
+        if cached_taxon:
+            print(f"Found taxon {taxon_id} in database cache")
+            return cached_taxon
 
         try:
+            print(f"Fetching taxon {taxon_id} from API")
             response = requests.get(f"{INaturalistAPI.BASE_URL}/taxa/{taxon_id}")
             response.raise_for_status()
             result = response.json()["results"][0]
-            INaturalistAPI.taxon_cache[taxon_id] = result
+
+            # Save to database
+            db.save_taxon(
+                taxon_id=result["id"],
+                name=result["name"],
+                rank=result["rank"],
+                common_name=result.get("preferred_common_name")
+            )
+
             return result
-        except requests.RequestException:
+        except requests.RequestException as e:
+            print(f"Error fetching taxon {taxon_id}: {str(e)}")
             return None
 
     @staticmethod
-    def get_user_observations(username: str, taxonomic_group: str = None, per_page: int = 200) -> List[Dict]:
+    def get_user_observations(username: str, taxonomic_group: Optional[str] = None, per_page: int = 200) -> List[Dict]:
         """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
         taxon_params = {
             "Insects": 47158,     # Class Insecta
@@ -68,20 +80,20 @@ class INaturalistAPI:
                 for obs in data["results"]:
                     if "taxon" in obs and "ancestor_ids" in obs["taxon"]:
                         ancestor_ids = obs["taxon"]["ancestor_ids"]
-                        
+
                         # Fetch details for uncached taxa
                         for taxon_id in ancestor_ids:
-                            if taxon_id not in INaturalistAPI.taxon_cache:
-                                print(f"Fetching details for taxon {taxon_id}")
-                                INaturalistAPI.get_taxon_details(taxon_id)
+                            taxon_details = INaturalistAPI.get_taxon_details(taxon_id)
+                            if not taxon_details:
                                 time.sleep(0.5)  # Rate limiting
-                        
+
                         # Add ancestor details to the observation
                         obs["taxon"]["ancestors"] = [
-                            INaturalistAPI.taxon_cache.get(aid, {}) 
+                            INaturalistAPI.get_taxon_details(aid)
                             for aid in ancestor_ids
+                            if INaturalistAPI.get_taxon_details(aid)
                         ]
-                
+
                 observations.extend(data["results"])
 
                 # Debug print for first observation's ancestors (only on first page)
@@ -90,8 +102,8 @@ class INaturalistAPI:
                     print("\nFirst observation ancestry:")
                     print(f"Taxon: {first_obs['taxon']['name']}")
                     print("Ancestors:")
-                    for ancestor in first_obs['taxon'].get('ancestors', []):
-                        print(f"  {ancestor.get('rank')}: {ancestor.get('name')}")
+                    for ancestor in first_obs["taxon"].get("ancestors", []):
+                        print(f"  {ancestor['rank']}: {ancestor['name']}")
 
                 if len(data["results"]) < per_page:
                     break
