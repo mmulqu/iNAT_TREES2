@@ -1,3 +1,4 @@
+
 import pandas as pd
 from typing import List, Dict, Optional
 
@@ -17,37 +18,74 @@ class DataProcessor:
         processed_data = []
         
         for obs in observations:
-            if not obs.get("taxon") or not obs.get("id"):
+            try:
+                if not obs.get("taxon") or not obs.get("id"):
+                    continue
+                    
+                taxon = obs["taxon"]
+                ancestors = taxon.get("ancestors", [])
+                
+                # Initialize all possible ranks with None
+                taxon_data = {
+                    "observation_id": obs["id"],
+                    "taxon_id": taxon["id"],
+                    "name": taxon["name"],
+                    "rank": taxon["rank"],
+                    "rank_level": taxon.get("rank_level"),
+                    "iconic_taxon_id": taxon.get("iconic_taxon_id"),
+                    "iconic_taxon_name": taxon.get("iconic_taxon_name"),
+                    # Initialize all taxonomic ranks
+                    "kingdom": None,
+                    "phylum": None,
+                    "class": None,
+                    "order": None,
+                    "family": None,
+                    "genus": None,
+                    "species": None,
+                    # Initialize names and levels
+                    "kingdom_name": None,
+                    "phylum_name": None,
+                    "class_name": None,
+                    "order_name": None,
+                    "family_name": None,
+                    "genus_name": None,
+                    "species_name": None,
+                    "kingdom_level": None,
+                    "phylum_level": None,
+                    "class_level": None,
+                    "order_level": None,
+                    "family_level": None,
+                    "genus_level": None,
+                    "species_level": None,
+                }
+                
+                # Fill in ancestor data
+                for ancestor in ancestors:
+                    rank = ancestor["rank"]
+                    if rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
+                        taxon_data[rank] = ancestor["id"]
+                        taxon_data[f"{rank}_name"] = ancestor["name"]
+                        taxon_data[f"{rank}_level"] = ancestor.get("rank_level")
+                
+                processed_data.append(taxon_data)
+                
+            except Exception as e:
+                print(f"Error processing observation {obs.get('id')}: {str(e)}")
                 continue
-                
-            taxon = obs["taxon"]
-            ancestors = taxon.get("ancestors", [])
             
-            taxon_data = {
-                "observation_id": obs["id"],
-                "taxon_id": taxon["id"],
-                "name": taxon["name"],
-                "rank": taxon["rank"],
-                "rank_level": taxon["rank_level"],
-                "iconic_taxon_id": taxon.get("iconic_taxon_id"),
-                "iconic_taxon_name": taxon.get("iconic_taxon_name"),
-            }
-            
-            for ancestor in ancestors:
-                rank = ancestor["rank"]
-                taxon_data[rank] = ancestor["id"]
-                taxon_data[f"{rank}_name"] = ancestor["name"]
-                taxon_data[f"{rank}_level"] = ancestor["rank_level"]
-                
-            processed_data.append(taxon_data)
-            
-        return pd.DataFrame(processed_data)
+        df = pd.DataFrame(processed_data)
+        
+        # Apply taxonomic filter if specified
+        if taxonomic_group and taxonomic_group in DataProcessor.TAXONOMIC_FILTERS:
+            filter_criteria = DataProcessor.TAXONOMIC_FILTERS[taxonomic_group]
+            for rank, value in filter_criteria.items():
+                df = df[df[f"{rank}_name"] == value]
+        
+        return df
 
     @staticmethod
     def build_taxonomy_hierarchy(df: pd.DataFrame, filter_rank: str = None, filter_taxon_id: int = None) -> Dict:
-        """
-        Build hierarchical taxonomy with evolutionary distances based on rank levels.
-        """
+        """Build hierarchical taxonomy with evolutionary distances based on rank levels."""
         def get_distance(rank_level):
             """Convert iNat rank levels to distances"""
             return (100 - rank_level) / 20.0 if rank_level else 1.0
@@ -63,7 +101,7 @@ class DataProcessor:
             
             for rank in ["kingdom", "phylum", "class", "order", "family", "genus", "species"]:
                 if pd.isna(row[rank]):
-                    break
+                    continue
                     
                 taxon_id = row[rank]
                 rank_level = row.get(f"{rank}_level")
@@ -81,8 +119,8 @@ class DataProcessor:
                     
                 if taxon_id not in current_level:
                     current_level[taxon_id] = {
-                        "name": row["name"] if rank == "species" else "",
-                        "common_name": row["common_name"] if rank == "species" else "",
+                        "name": row[f"{rank}_name"] if rank != "species" else row["name"],
+                        "common_name": row.get("common_name", ""),
                         "rank": rank,
                         "distance": current_distance,
                         "children": {}
