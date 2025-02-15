@@ -4,11 +4,9 @@ import time
 
 class INaturalistAPI:
     BASE_URL = "https://api.inaturalist.org/v1"
-
     @staticmethod
     def get_user_observations(username: str, taxonomic_group: str = None, per_page: int = 200) -> List[Dict]:
         """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
-        # Using taxon_ids for more precise filtering
         taxon_params = {
             "Insects": 47158,     # Class Insecta
             "Fungi": 47170,       # Kingdom Fungi
@@ -17,10 +15,8 @@ class INaturalistAPI:
             "Reptiles": 26036,    # Class Reptilia
             "Amphibians": 20978   # Class Amphibia
         }
-
         observations = []
         page = 1
-
         while True:
             try:
                 params = {
@@ -29,11 +25,12 @@ class INaturalistAPI:
                     "page": page,
                     "order": "desc",
                     "order_by": "created_at",
-                    "includes": "taxon,ancestors"  # Request full ancestor data
+                    "include": ["taxon", "ancestors"]
                 }
-
                 if taxonomic_group in taxon_params:
                     params["taxon_id"] = taxon_params[taxonomic_group]
+
+                print(f"Making API request with params: {params}")  # Debug print
 
                 response = requests.get(
                     f"{INaturalistAPI.BASE_URL}/observations",
@@ -45,6 +42,15 @@ class INaturalistAPI:
                 if not data["results"]:
                     break
 
+                # Debug print for first observation's ancestors (only on first page)
+                if page == 1 and data["results"]:
+                    first_obs = data["results"][0]
+                    print("\nFirst observation ancestry:")
+                    print(f"Taxon: {first_obs['taxon']['name']}")
+                    print("Ancestors:")
+                    for ancestor in first_obs['taxon'].get('ancestors', []):
+                        print(f"  {ancestor['rank']}: {ancestor['name']}")
+
                 observations.extend(data["results"])
 
                 if len(data["results"]) < per_page:
@@ -52,10 +58,8 @@ class INaturalistAPI:
 
                 page += 1
                 time.sleep(1)  # Rate limiting
-
             except requests.RequestException as e:
                 raise Exception(f"Error fetching observations: {str(e)}")
-
         return observations
 
     @staticmethod
