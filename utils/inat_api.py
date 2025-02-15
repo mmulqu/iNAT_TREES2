@@ -8,13 +8,14 @@ class INaturalistAPI:
     @staticmethod
     def get_user_observations(username: str, taxonomic_group: str = None, per_page: int = 200) -> List[Dict]:
         """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
+        # Using taxon_ids for more precise filtering
         taxon_params = {
-            "Insects": "class=Insecta",
-            "Fungi": "kingdom=Fungi",
-            "Plants": "kingdom=Plantae",
-            "Mammals": "class=Mammalia",
-            "Reptiles": "class=Reptilia",
-            "Amphibians": "class=Amphibia"
+            "Insects": 47158,     # Class Insecta
+            "Fungi": 47170,       # Kingdom Fungi
+            "Plants": 47126,      # Kingdom Plantae
+            "Mammals": 40151,     # Class Mammalia
+            "Reptiles": 26036,    # Class Reptilia
+            "Amphibians": 20978   # Class Amphibia
         }
         
         observations = []
@@ -31,8 +32,7 @@ class INaturalistAPI:
                 }
                 
                 if taxonomic_group in taxon_params:
-                    taxon_filter = taxon_params[taxonomic_group].split('=')
-                    params[f"taxon_{taxon_filter[0]}"] = taxon_filter[1]
+                    params["taxon_id"] = taxon_params[taxonomic_group]
                     
                 response = requests.get(
                     f"{INaturalistAPI.BASE_URL}/observations",
