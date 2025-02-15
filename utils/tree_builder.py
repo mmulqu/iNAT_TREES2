@@ -1,3 +1,4 @@
+
 import plotly.graph_objects as go
 from typing import Dict, Tuple
 import pandas as pd
@@ -101,7 +102,6 @@ class TreeBuilder:
             path_x = [px, px, cx]
             path_y = [py, cy, cy]
             
-            # Add branch lines
             fig.add_trace(go.Scatter(
                 x=path_x,
                 y=path_y,
@@ -113,31 +113,29 @@ class TreeBuilder:
                 hoverinfo="skip",
                 showlegend=False
             ))
-            
-            # Add node at branch point for higher taxonomic ranks
-            if parent in nodes and nodes[parent].get("rank") != "species":
-                name = nodes[parent].get("name", "")
-                
+
+        # Add nodes and hover text for higher taxonomic ranks (non-species)
+        for node_id, node_info in nodes.items():
+            if node_info.get("rank") != "species":
                 fig.add_trace(go.Scatter(
-                    x=[px],
-                    y=[py],
+                    x=[pos[node_id][0]],
+                    y=[pos[node_id][1]],
                     mode="markers",
                     marker=dict(
-                        size=6,
+                        size=8,
                         color="#2E7D32"
                     ),
                     hoverinfo="text",
-                    text=name,
+                    text=node_info.get("name", ""),
                     showlegend=False
                 ))
 
         # Add nodes and labels for species
         for node_id, node_info in nodes.items():
-            if node_info.get("rank") == "species":  # Only add labels for species nodes
+            if node_info.get("rank") == "species":
                 label = f"{node_info['name']}"
                 if node_info["common_name"]:
                     label += f"<br>{node_info['common_name']}"
-
                 fig.add_trace(go.Scatter(
                     x=[pos[node_id][0]],
                     y=[pos[node_id][1]],
