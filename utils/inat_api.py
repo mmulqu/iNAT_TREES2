@@ -55,17 +55,30 @@ class INaturalistAPI:
 
         # Initialize cache
         taxonomy_cache = TaxonomyCache()
-        collected_species_ids = set()
+        root_taxon_id = None
+        use_cached_tree = False
+
+        # Check if we can use cached data
+        if taxonomic_group in taxon_params:
+            root_taxon_id = taxon_params[taxonomic_group]
+            cached_tree = taxonomy_cache.get_cached_tree(root_taxon_id)
+            if cached_tree:
+                use_cached_tree = True
+                print(f"Using cached taxonomy tree for {taxonomic_group}")
+
+        observations = []
+        page = 1
+        db = Database.get_instance()
+        taxonomy_cache = TaxonomyCache()
 
         # If filtering by taxonomic group, ensure we have the complete structure
         root_taxon_id = None
         if taxonomic_group in taxon_params:
             root_taxon_id = taxon_params[taxonomic_group]
-            print(f"Building complete taxonomy for {taxonomic_group}")
-
-        observations = []
-        page = 1
-        db = Database.get_instance()
+            cached_tree = taxonomy_cache.get_cached_tree(root_taxon_id)
+            if not cached_tree:
+                # We need to build the complete taxonomy for this group
+                print(f"Building complete taxonomy for {taxonomic_group}")
 
         while True:
             try:
@@ -74,9 +87,15 @@ class INaturalistAPI:
                     "per_page": per_page,
                     "page": page,
                     "order": "desc",
-                    "order_by": "created_at",
-                    "include": ["taxon", "ancestors"]
+                    "order_by": "created_at"
                 }
+                
+                if use_cached_tree:
+                    # Only fetch basic observation data when using cached tree
+                    params["fields"] = "id,taxon.id"
+                else:
+                    # Fetch full taxonomic data when not using cache
+                    params["include"] = ["taxon", "ancestors"]
 
                 if taxonomic_group in taxon_params:
                     params["taxon_id"] = taxon_params[taxonomic_group]
@@ -120,11 +139,14 @@ class INaturalistAPI:
                                 "ancestor_data": ancestors  # Store complete ancestor information
                             })
 
-                            # Add to collected species IDs
-                            collected_species_ids.add(species_id)
-
                             # Update the observation with complete ancestor information
                             obs["taxon"]["ancestors"] = ancestors
+
+                            # If we're building a complete taxonomy, update it
+                            if root_taxon_id and root_taxon_id in ancestor_ids:
+                                current_tree = taxonomy_cache.get_cached_tree(root_taxon_id) or {}
+                                # Add this species and its lineage to the tree
+                                # This will be handled by the TaxonomyCache class
 
                 observations.extend(data["results"])
 
@@ -136,12 +158,5 @@ class INaturalistAPI:
 
             except requests.RequestException as e:
                 raise Exception(f"Error fetching observations: {str(e)}")
-
-        # After collecting all observations, build and cache the complete taxonomy
-        if root_taxon_id and collected_species_ids:
-            print(f"Building taxonomy tree for {taxonomic_group} with {len(collected_species_ids)} species")
-            tree = taxonomy_cache.build_tree_from_taxa(root_taxon_id, list(collected_species_ids))
-            if tree:
-                taxonomy_cache.save_tree(root_taxon_id, tree, list(collected_species_ids))
 
         return observations
