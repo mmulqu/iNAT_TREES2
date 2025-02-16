@@ -131,8 +131,8 @@ class INaturalistAPI:
 
         # Get root taxon ID if taxonomic group is specified
         root_taxon_id = None
-        if taxonomic_group in self.taxon_params:
-            root_taxon_id = self.taxon_params[taxonomic_group]
+        if taxonomic_group in INaturalistAPI.taxon_params:
+            root_taxon_id = INaturalistAPI.taxon_params[taxonomic_group]
             print(f"Using taxonomic filter for {taxonomic_group} (ID: {root_taxon_id})")
 
         while True:
