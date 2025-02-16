@@ -44,7 +44,14 @@ class Database:
 
             CREATE INDEX IF NOT EXISTS taxa_rank_idx ON taxa(rank);
             CREATE INDEX IF NOT EXISTS taxa_ancestor_ids_idx ON taxa USING gin(ancestor_ids);
-            CREATE INDEX IF NOT EXISTS taxa_ancestor_data_idx ON taxa USING gin(ancestor_data)
+            CREATE INDEX IF NOT EXISTS taxa_ancestor_data_idx ON taxa USING gin(ancestor_data);
+
+            CREATE TABLE IF NOT EXISTS filtered_trees (
+                cache_key TEXT PRIMARY KEY,
+                filtered_tree JSONB NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS filtered_trees_created_idx ON filtered_trees(created_at);
             """)
             self.conn.commit()
 
