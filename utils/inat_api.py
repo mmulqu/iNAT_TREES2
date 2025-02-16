@@ -144,8 +144,7 @@ class INaturalistAPI:
                     "page": page,
                     "order": "desc",
                     "order_by": "created_at",
-                    "include_taxon": "true",
-                    "include_ancestors": "true"
+                    "include[]": ["taxon", "ancestors"]
                 }
 
                 # Add taxonomic filter if specified
