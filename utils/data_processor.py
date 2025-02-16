@@ -91,10 +91,13 @@ class DataProcessor:
         if filter_rank and filter_taxon_id:
             root_id = filter_taxon_id
         else:
-            # Try to find the most specific common ancestor
+            # Try to find the most specific common ancestor by checking IDs
             for group, info in DataProcessor.TAXONOMIC_FILTERS.items():
-                if df["taxon_" + info["class"].lower()].iloc[0] == info["class"]:
-                    root_id = info["id"]
+                filter_id = info["id"]
+                # Check if this filter's ID appears in any ancestor chain
+                if any(filter_id == row["class"] for _, row in df.iterrows()):
+                    root_id = filter_id
+                    print(f"Found matching root for {group} with ID {root_id}")
                     break
 
         if root_id:
@@ -104,6 +107,7 @@ class DataProcessor:
                 return filtered_tree
 
         # Fallback to building tree from DataFrame if cache miss
+        print("Cache miss - building tree from DataFrame")
         return DataProcessor._build_tree_from_dataframe(df)
 
     @staticmethod

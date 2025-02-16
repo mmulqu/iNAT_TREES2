@@ -1,0 +1,102 @@
+Building complete taxonomy for Amphibians
+Making API request with params: {'user_login': 'awoodroof38', 'per_page': 200, 'page': 1, 'order': 'desc', 'order_by': 'created_at', 'include': ['taxon', 'ancestors'], 'taxon_id': 20978}
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 20979
+Found cached data for taxon 23540
+Found cached data for taxon 787592
+Found cached data for taxon 23747
+Found cached data for taxon 23969
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 20979
+Found cached data for taxon 25473
+Found cached data for taxon 60340
+Found cached data for taxon 66003
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 20979
+Found cached data for taxon 23540
+Found cached data for taxon 787592
+Found cached data for taxon 24374
+Found cached data for taxon 24382
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 20979
+Found cached data for taxon 23540
+Found cached data for taxon 787592
+Found cached data for taxon 24374
+Found cached data for taxon 24382
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 20979
+Found cached data for taxon 25473
+Found cached data for taxon 60340
+Found cached data for taxon 66012
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 26718
+Found cached data for taxon 27701
+Found cached data for taxon 787591
+Found cached data for taxon 27800
+Found cached data for taxon 27805
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 26718
+Found cached data for taxon 26909
+Found cached data for taxon 787551
+Found cached data for taxon 27135
+Found cached data for taxon 27186
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 26718
+Found cached data for taxon 26720
+Found cached data for taxon 26721
+Found cached data for taxon 26790
+Found cached data for taxon 48460
+Found cached data for taxon 1
+Found cached data for taxon 2
+Found cached data for taxon 355675
+Found cached data for taxon 20978
+Found cached data for taxon 20979
+Found cached data for taxon 21359
+Found cached data for taxon 64747
+Found cached data for taxon 64968
+
+First observation ancestors:
+Taxon: Hyla cinerea
+Ancestors:
+  stateofmatter: Life
+  kingdom: Animalia
+  phylum: Chordata
+  subphylum: Vertebrata
+  class: Amphibia
+  order: Anura
+  family: Hylidae
+  subfamily: Hylinae
+  genus: Hyla
+  species: Hyla cinerea
