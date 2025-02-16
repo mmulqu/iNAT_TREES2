@@ -1,0 +1,66 @@
+from utils.tree_builder import TreeBuilder
+import pandas as pd
+
+def process_observations(username: str, taxonomic_group: str):
+    """Process observations and build taxonomy tree."""
+    
+    # Get observations from iNaturalist
+    api = INaturalistAPI()
+    observations = api.get_user_observations(username, taxonomic_group)
+    
+    # Collect all taxa data
+    taxa_data = []
+    db = Database.get_instance()
+    
+    for obs in observations:
+        if 'taxon' in obs:
+            taxon = obs['taxon']
+            taxa_data.append({
+                'taxon_id': taxon['id'],
+                'name': taxon['name'],
+                'rank': taxon['rank'],
+                'ancestor_ids': taxon.get('ancestor_ids', [])
+            })
+            
+            # Also add ancestors to taxa data
+            for ancestor in taxon.get('ancestors', []):
+                taxa_data.append({
+                    'taxon_id': ancestor['id'],
+                    'name': ancestor['name'],
+                    'rank': ancestor['rank'],
+                    'ancestor_ids': ancestor.get('ancestor_ids', [])
+                })
+    
+    # Remove duplicates
+    df = pd.DataFrame(taxa_data).drop_duplicates(subset=['taxon_id'])
+    
+    # Build the tree
+    builder = TreeBuilder()
+    complete_tree = builder.build_taxonomy_tree(df.to_dict('records'))
+    
+    # Get the appropriate root ID for the taxonomic group
+    root_id = INaturalistAPI.taxon_params.get(taxonomic_group)
+    if not root_id:
+        return None
+        
+    # Extract the subtree for our taxonomic group
+    group_tree = builder.find_root_node(complete_tree, root_id)
+    if not group_tree:
+        return None
+        
+    # Get all taxa IDs and species IDs
+    all_taxa = builder.collect_all_taxa_ids(group_tree)
+    species_ids = [
+        tid for tid in all_taxa 
+        if df[df['taxon_id'] == tid]['rank'].iloc[0] == 'species'
+    ]
+    
+    # Save to cache
+    taxonomy_cache = TaxonomyCache()
+    taxonomy_cache.save_tree(
+        root_id=root_id,
+        tree=group_tree,
+        species_ids=species_ids
+    )
+    
+    return group_tree
