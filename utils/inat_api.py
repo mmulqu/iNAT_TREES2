@@ -88,30 +88,38 @@ class INaturalistAPI:
                         taxon = obs["taxon"]
                         species_id = taxon["id"]
 
-                        # Try to get cached branch first
-                        cached_branch = db.get_cached_branch(species_id)
-                        if cached_branch:
-                            obs["taxon"]["ancestors"] = cached_branch["ancestor_data"]
-                            continue
-
-                        # If not cached, fetch and cache the full branch
-                        if "ancestor_ids" in taxon:
-                            ancestor_ids = taxon["ancestor_ids"]
+                        # Make sure we have all the data for species level taxa
+                        if taxon.get("rank") == "species":
+                            ancestor_ids = taxon.get("ancestor_ids", [])
                             ancestors = []
 
+                            # Fetch and cache each ancestor's details
                             for aid in ancestor_ids:
                                 ancestor = INaturalistAPI.get_taxon_details(aid)
                                 if ancestor:
                                     ancestors.append(ancestor)
                                     time.sleep(0.5)  # Rate limiting
 
-                            # Cache the branch
-                            branch_data = {
+                            # Save the species with complete information
+                            db.save_branch(species_id, {
                                 "name": taxon["name"],
-                                "ancestry": ancestors
-                            }
-                            db.save_branch(species_id, branch_data)
+                                "rank": "species",  # Explicitly set species rank
+                                "preferred_common_name": taxon.get("preferred_common_name", ""),
+                                "ancestor_ids": ancestor_ids,  # Include full ancestry chain
+                                "ancestor_data": ancestors  # Store complete ancestor information
+                            })
+
+                            # Update the observation with complete ancestor information
                             obs["taxon"]["ancestors"] = ancestors
+                        else:
+                            # For non-species taxa, just cache what we have
+                            db.save_branch(species_id, {
+                                "name": taxon["name"],
+                                "rank": taxon.get("rank", "unknown"),
+                                "preferred_common_name": taxon.get("preferred_common_name", ""),
+                                "ancestor_ids": taxon.get("ancestor_ids", []),
+                                "ancestor_data": taxon.get("ancestors", [])
+                            })
 
                 observations.extend(data["results"])
 
