@@ -1,0 +1,144 @@
+I see the circular import issue. The problem is:
+1. `app.py` imports `INaturalistAPI`
+2. `inat_api.py` imports `Database`
+3. `database.py` imports `INaturalistAPI`
+
+Let's reorganize the code to break this circular dependency. Here's how:
+
+1. First, create a base class for database operations in `database.py`:
+```python
+import os
+import psycopg2
+from psycopg2.extras import DictCursor, Json
+from typing import Optional, Dict
+from datetime import datetime, timezone
+
+class Database:
+    _instance = None
+
+    def __init__(self):
+        self.conn = None
+        self.connect()
+        self.create_tables()
+
+    def connect(self):
+        try:
+            if self.conn is None or self.conn.closed:
+                self.conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        except Exception as e:
+            print(f"Database connection error: {e}")
+            self.conn = None
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        elif cls._instance.conn is None or cls._instance.conn.closed:
+            cls._instance.connect()
+        return cls._instance
+
+    def create_tables(self):
+        with self.conn.cursor() as cur:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS taxa (
+                taxon_id INTEGER PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                rank VARCHAR(50) NOT NULL,
+                common_name VARCHAR(255),
+                ancestor_ids INTEGER[],
+                ancestor_data JSONB,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS taxa_rank_idx ON taxa(rank);
+            CREATE INDEX IF NOT EXISTS taxa_ancestor_ids_idx ON taxa USING gin(ancestor_ids);
+            CREATE INDEX IF NOT EXISTS taxa_ancestor_data_idx ON taxa USING gin(ancestor_data)
+            """)
+            self.conn.commit()
+
+    def get_cached_branch(self, taxon_id: int) -> Optional[Dict]:
+        self.connect()
+        if not self.conn:
+            return None
+
+        with self.conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("""
+            SELECT ancestor_data, name, rank, common_name, ancestor_ids
+            FROM taxa
+            WHERE taxon_id = %s
+            """, (taxon_id,))
+            result = cur.fetchone()
+            if result:
+                return {
+                    "ancestor_data": result["ancestor_data"],
+                    "name": result["name"],
+                    "rank": result["rank"],
+                    "common_name": result["common_name"],
+                    "ancestor_ids": result["ancestor_ids"]
+                }
+        return None
+
+    def save_branch(self, taxon_id: int, taxon_data: Dict):
+        self.connect()
+        if not self.conn:
+            return
+
+        try:
+            with self.conn:
+                with self.conn.cursor() as cur:
+                    cur.execute("""
+                    INSERT INTO taxa 
+                    (taxon_id, name, rank, common_name, ancestor_ids, ancestor_data, last_updated)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (taxon_id) DO UPDATE
+                    SET name = EXCLUDED.name,
+                        rank = EXCLUDED.rank,
+                        common_name = EXCLUDED.common_name,
+                        ancestor_ids = EXCLUDED.ancestor_ids,
+                        ancestor_data = EXCLUDED.ancestor_data,
+                        last_updated = EXCLUDED.last_updated
+                    """, (
+                        taxon_id,
+                        taxon_data.get('name', ''),
+                        taxon_data.get('rank', ''),
+                        taxon_data.get('preferred_common_name', ''),
+                        taxon_data.get('ancestor_ids', []),
+                        Json(taxon_data),
+                        datetime.now(timezone.utc)
+                    ))
+        except Exception as e:
+            print(f"Error saving branch: {e}")
+            if self.conn:
+                self.conn.rollback()
+```
+
+2. Then modify `inat_api.py` to use the database without importing it at module level:
+```python
+import requests
+from typing import Dict, List, Optional
+import time
+
+class INaturalistAPI:
+    BASE_URL = "https://api.inaturalist.org/v1"
+
+    @staticmethod
+    def get_taxon_details(taxon_id: int, include_ancestors: bool = False) -> Optional[Dict]:
+        from utils.database import Database  # Import here to avoid circular dependency
+        
+        db = Database.get_instance()
+        cached_data = db.get_cached_branch(taxon_id)
+        # ... rest of the method ...
+
+    @staticmethod
+    def get_user_observations(username: str, taxonomic_group: Optional[str] = None, per_page: int = 200) -> List[Dict]:
+        from utils.database import Database  # Import here to avoid circular dependency
+        # ... rest of the method ...
+```
+
+The key changes are:
+1. Remove the database import from the top of `inat_api.py`
+2. Import Database inside the methods where it's needed
+3. Keep the database class independent of the API class
+
+This should resolve the circular import issue while maintaining all the functionality. Let me know if you need help with any other parts of the implementation!

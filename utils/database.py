@@ -110,6 +110,12 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+import os
+import psycopg2
+from psycopg2.extras import DictCursor, Json
+from typing import Optional, Dict
+from datetime import datetime, timezone
+
 class Database:
     _instance = None
 
@@ -119,7 +125,6 @@ class Database:
         self.create_tables()
 
     def connect(self):
-        """Establish database connection."""
         try:
             if self.conn is None or self.conn.closed:
                 self.conn = psycopg2.connect(os.environ["DATABASE_URL"])
@@ -136,7 +141,6 @@ class Database:
         return cls._instance
 
     def create_tables(self):
-        """Create tables if they don't exist."""
         with self.conn.cursor() as cur:
             cur.execute("""
             CREATE TABLE IF NOT EXISTS taxa (
@@ -157,7 +161,6 @@ class Database:
             self.conn.commit()
 
     def get_cached_branch(self, taxon_id: int) -> Optional[Dict]:
-        """Retrieve cached branch information for a species."""
         self.connect()
         if not self.conn:
             return None
@@ -180,7 +183,6 @@ class Database:
         return None
 
     def save_branch(self, taxon_id: int, taxon_data: Dict):
-        """Save taxon branch data to the database."""
         self.connect()
         if not self.conn:
             return
