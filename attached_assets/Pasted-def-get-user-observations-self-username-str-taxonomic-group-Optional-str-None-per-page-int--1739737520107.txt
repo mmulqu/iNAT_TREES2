@@ -1,0 +1,87 @@
+def get_user_observations(self, username: str, taxonomic_group: Optional[str] = None, per_page: int = 200) -> List[Dict]:
+    """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
+    from utils.database import Database
+    
+    observations = []
+    page = 1
+    db = Database.get_instance()
+    taxonomy_cache = TaxonomyCache()
+
+    # Get root taxon ID if taxonomic group is specified
+    root_taxon_id = None
+    if taxonomic_group in self.taxon_params:
+        root_taxon_id = self.taxon_params[taxonomic_group]
+        print(f"Using taxonomic filter for {taxonomic_group} (ID: {root_taxon_id})")
+
+    while True:
+        try:
+            # Base parameters
+            params = {
+                "user_login": username,
+                "per_page": per_page,
+                "page": page,
+                "order": "desc",
+                "order_by": "created_at",
+                "include": ["taxon", "ancestors"]  # Include both in a single list
+            }
+
+            # Add taxonomic filter if specified
+            if root_taxon_id:
+                params["taxon_id"] = root_taxon_id
+
+            print(f"Making API request with params: {params}")
+
+            response = requests.get(
+                f"{self.BASE_URL}/observations",
+                params=params
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if not data["results"]:
+                break
+
+            # Process observations and build taxonomy
+            for obs in data["results"]:
+                if "taxon" in obs:
+                    taxon = obs["taxon"]
+                    species_id = taxon["id"]
+
+                    # Make sure we have all the data for species level taxa
+                    if taxon.get("rank") == "species":
+                        ancestor_ids = taxon.get("ancestor_ids", [])
+                        ancestors = []
+
+                        # Fetch and cache each ancestor's details
+                        for aid in ancestor_ids:
+                            ancestor = self.get_taxon_details(aid)
+                            if ancestor:
+                                ancestors.append(ancestor)
+                                time.sleep(0.5)  # Rate limiting
+
+                        # Save the species with complete information
+                        db.save_branch(species_id, {
+                            "name": taxon["name"],
+                            "rank": "species",
+                            "preferred_common_name": taxon.get("preferred_common_name", ""),
+                            "ancestor_ids": ancestor_ids,
+                            "ancestor_data": ancestors
+                        })
+
+                        # Update the observation with complete ancestor information
+                        obs["taxon"]["ancestors"] = ancestors
+
+            observations.extend(data["results"])
+
+            if len(data["results"]) < per_page:
+                break
+
+            page += 1
+            time.sleep(1)  # Rate limiting
+
+        except requests.RequestException as e:
+            print(f"API Error: {str(e)}")
+            print(f"Response content: {e.response.content if hasattr(e, 'response') else 'No response content'}")
+            raise Exception(f"Error fetching observations: {str(e)}")
+
+    return observations
