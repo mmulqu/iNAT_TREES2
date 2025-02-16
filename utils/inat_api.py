@@ -122,63 +122,37 @@ class INaturalistAPI:
 
     def get_user_observations(self, username: str, taxonomic_group: Optional[str] = None, per_page: int = 200) -> List[Dict]:
         """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
-        from utils.database import Database  # Import here to avoid circular dependency
-
-        taxon_params = {
-            "Insects": 47158,     # Class Insecta
-            "Fungi": 47170,       # Kingdom Fungi
-            "Plants": 47126,      # Kingdom Plantae
-            "Mammals": 40151,     # Class Mammalia
-            "Reptiles": 26036,    # Class Reptilia
-            "Amphibians": 20978   # Class Amphibia
-        }
-
-        # Initialize cache
-        taxonomy_cache = TaxonomyCache()
-        root_taxon_id = None
-        use_cached_tree = False
-
-        # Check if we can use cached data
-        if taxonomic_group in taxon_params:
-            root_taxon_id = taxon_params[taxonomic_group]
-            cached_tree = taxonomy_cache.get_cached_tree(root_taxon_id)
-            if cached_tree:
-                use_cached_tree = True
-                print(f"Using cached taxonomy tree for {taxonomic_group}")
-
+        from utils.database import Database
+        
         observations = []
         page = 1
         db = Database.get_instance()
         taxonomy_cache = TaxonomyCache()
 
-        # If filtering by taxonomic group, ensure we have the complete structure
+        # Get root taxon ID if taxonomic group is specified
         root_taxon_id = None
-        if taxonomic_group in taxon_params:
-            root_taxon_id = taxon_params[taxonomic_group]
-            cached_tree = taxonomy_cache.get_cached_tree(root_taxon_id)
-            if not cached_tree:
-                # We need to build the complete taxonomy for this group
-                print(f"Building complete taxonomy for {taxonomic_group}")
+        if taxonomic_group in self.taxon_params:
+            root_taxon_id = self.taxon_params[taxonomic_group]
+            print(f"Using taxonomic filter for {taxonomic_group} (ID: {root_taxon_id})")
 
         while True:
             try:
+                # Base parameters
                 params = {
                     "user_login": username,
                     "per_page": per_page,
                     "page": page,
                     "order": "desc",
-                    "order_by": "created_at"
+                    "order_by": "created_at",
+                    "include_taxon": "true",
+                    "include_ancestors": "true"
                 }
-                
-                if use_cached_tree:
-                    # Only fetch basic observation data when using cached tree
-                    params["fields"] = "id,taxon.id"
-                else:
-                    # Fetch full taxonomic data when not using cache
-                    params["include"] = ["taxon", "ancestors"]
 
-                if taxonomic_group in taxon_params:
-                    params["taxon_id"] = taxon_params[taxonomic_group]
+                # Add taxonomic filter if specified
+                if root_taxon_id:
+                    params["taxon_id"] = root_taxon_id
+
+                print(f"Making API request with params: {params}")
 
                 print(f"Making API request with params: {params}")
 
