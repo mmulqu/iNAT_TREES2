@@ -53,6 +53,19 @@ class INaturalistAPI:
             "Amphibians": 20978   # Class Amphibia
         }
 
+        # Initialize cache
+        taxonomy_cache = TaxonomyCache()
+        root_taxon_id = None
+        use_cached_tree = False
+
+        # Check if we can use cached data
+        if taxonomic_group in taxon_params:
+            root_taxon_id = taxon_params[taxonomic_group]
+            cached_tree = taxonomy_cache.get_cached_tree(root_taxon_id)
+            if cached_tree:
+                use_cached_tree = True
+                print(f"Using cached taxonomy tree for {taxonomic_group}")
+
         observations = []
         page = 1
         db = Database.get_instance()
@@ -74,9 +87,15 @@ class INaturalistAPI:
                     "per_page": per_page,
                     "page": page,
                     "order": "desc",
-                    "order_by": "created_at",
-                    "include": ["taxon", "ancestors"]
+                    "order_by": "created_at"
                 }
+                
+                if use_cached_tree:
+                    # Only fetch basic observation data when using cached tree
+                    params["fields"] = "id,taxon.id"
+                else:
+                    # Fetch full taxonomic data when not using cache
+                    params["include"] = ["taxon", "ancestors"]
 
                 if taxonomic_group in taxon_params:
                     params["taxon_id"] = taxon_params[taxonomic_group]
