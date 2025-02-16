@@ -4,6 +4,12 @@ from utils.inat_api import INaturalistAPI
 from utils.data_processor import DataProcessor
 from utils.tree_builder import TreeBuilder
 import time
+import os
+import psycopg2
+from psycopg2.extras import DictCursor, Json
+from typing import Optional, Dict, List
+import json
+from datetime import datetime, timezone
 
 # Page configuration
 st.set_page_config(
@@ -102,12 +108,7 @@ st.markdown("""
 <div style="text-align: center; margin-top: 2rem; padding: 1rem; background-color: #F0F4F1; border-radius: 0.5rem;">
     Made with ❤️ for nature enthusiasts
 </div>
-""", unsafe_allow_html=True) os
-import psycopg2
-from psycopg2.extras import DictCursor, Json
-from typing import Optional, Dict, List
-import json
-from datetime import datetime, timezone
+""", unsafe_allow_html=True)
 
 class Database:
     _instance = None
@@ -144,21 +145,18 @@ class Database:
                 rank VARCHAR(50) NOT NULL,
                 common_name VARCHAR(255),
                 ancestor_ids INTEGER[],
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS cached_branches (
-                species_id INTEGER PRIMARY KEY,
-                branch_data JSONB NOT NULL,
+                ancestor_data JSONB,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE INDEX IF NOT EXISTS taxa_rank_idx ON taxa(rank);
-            CREATE INDEX IF NOT EXISTS taxa_ancestor_ids_idx ON taxa USING gin(ancestor_ids)
+            CREATE INDEX IF NOT EXISTS taxa_ancestor_ids_idx ON taxa USING gin(ancestor_ids);
+            CREATE INDEX IF NOT EXISTS taxa_ancestor_data_idx ON taxa USING gin(ancestor_data)
             """)
             self.conn.commit()
 
-    def get_cached_branch(self, species_id: int) -> Optional[Dict]:
+    def get_cached_branch(self, taxon_id: int) -> Optional[Dict]:
         """Retrieve cached branch information for a species."""
         self.connect()
         if not self.conn:
@@ -166,67 +164,51 @@ class Database:
 
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("""
-            SELECT branch_data
-            FROM cached_branches
-            WHERE species_id = %s
-            """, (species_id,))
-            result = cur.fetchone()
-            if result:
-                return result[0]
-        return None
-
-    def save_branch(self, species_id: int, branch_data: Dict):
-        """Save branch information to the database."""
-        self.connect()
-        if not self.conn:
-            return
-
-        try:
-            with self.conn:  # This creates a transaction
-                with self.conn.cursor() as cur:
-                    cur.execute("""
-                    INSERT INTO cached_branches (species_id, branch_data, last_updated)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (species_id) DO UPDATE
-                    SET branch_data = EXCLUDED.branch_data,
-                        last_updated = EXCLUDED.last_updated
-                    """, (species_id, Json(branch_data), datetime.now(timezone.utc)))
-        except Exception as e:
-            print(f"Error saving branch: {e}")
-            if self.conn:
-                self.conn.rollback()
-
-    def get_taxon(self, taxon_id: int) -> Optional[Dict]:
-        """Retrieve taxon information from the database."""
-        self.connect()
-        if not self.conn:
-            return None
-
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("""
-            SELECT taxon_id, name, rank, common_name, ancestor_ids
+            SELECT ancestor_data, name, rank, common_name, ancestor_ids
             FROM taxa
             WHERE taxon_id = %s
             """, (taxon_id,))
             result = cur.fetchone()
             if result:
-                return dict(result)
+                return {
+                    "ancestor_data": result["ancestor_data"],
+                    "name": result["name"],
+                    "rank": result["rank"],
+                    "common_name": result["common_name"],
+                    "ancestor_ids": result["ancestor_ids"]
+                }
         return None
 
-    def save_taxon(self, taxon_id: int, name: str, rank: str, common_name: Optional[str] = None, ancestor_ids: Optional[List[int]] = None):
-        """Save taxon information to the database."""
+    def save_branch(self, taxon_id: int, taxon_data: Dict):
+        """Save taxon branch data to the database."""
         self.connect()
         if not self.conn:
             return
 
-        with self.conn.cursor() as cur:
-            cur.execute("""
-            INSERT INTO taxa (taxon_id, name, rank, common_name, ancestor_ids)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (taxon_id) DO UPDATE
-            SET name = EXCLUDED.name,
-                rank = EXCLUDED.rank,
-                common_name = EXCLUDED.common_name,
-                ancestor_ids = EXCLUDED.ancestor_ids
-            """, (taxon_id, name, rank, common_name, ancestor_ids))
-            self.conn.commit()
+        try:
+            with self.conn:
+                with self.conn.cursor() as cur:
+                    cur.execute("""
+                    INSERT INTO taxa 
+                    (taxon_id, name, rank, common_name, ancestor_ids, ancestor_data, last_updated)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (taxon_id) DO UPDATE
+                    SET name = EXCLUDED.name,
+                        rank = EXCLUDED.rank,
+                        common_name = EXCLUDED.common_name,
+                        ancestor_ids = EXCLUDED.ancestor_ids,
+                        ancestor_data = EXCLUDED.ancestor_data,
+                        last_updated = EXCLUDED.last_updated
+                    """, (
+                        taxon_id,
+                        taxon_data.get('name', ''),
+                        taxon_data.get('rank', ''),
+                        taxon_data.get('preferred_common_name', ''),
+                        taxon_data.get('ancestor_ids', []),
+                        Json(taxon_data),
+                        datetime.now(timezone.utc)
+                    ))
+        except Exception as e:
+            print(f"Error saving branch: {e}")
+            if self.conn:
+                self.conn.rollback()

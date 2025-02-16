@@ -11,18 +11,19 @@ class INaturalistAPI:
         """Fetch detailed information about a specific taxon."""
         db = Database.get_instance()
         
-        # Check for cached branch first if ancestors are needed
-        if include_ancestors:
-            cached_branch = db.get_cached_branch(taxon_id)
-            if cached_branch:
-                print(f"Found cached branch for taxon {taxon_id}")
-                return cached_branch
-        else:
-            # Check for individual taxon cache
-            cached_taxon = db.get_taxon(taxon_id)
-            if cached_taxon:
-                print(f"Found taxon {taxon_id} in database cache")
-                return cached_taxon
+        # Check cache first
+        cached_data = db.get_cached_branch(taxon_id)
+        if cached_data:
+            print(f"Found cached data for taxon {taxon_id}")
+            if include_ancestors:
+                return cached_data["ancestor_data"]
+            return {
+                "id": taxon_id,
+                "name": cached_data["name"],
+                "rank": cached_data["rank"],
+                "preferred_common_name": cached_data["common_name"],
+                "ancestor_ids": cached_data["ancestor_ids"]
+            }
 
         try:
             print(f"Fetching taxon {taxon_id} from API")
@@ -30,13 +31,8 @@ class INaturalistAPI:
             response.raise_for_status()
             result = response.json()["results"][0]
 
-            # Save to database
-            db.save_taxon(
-                taxon_id=result["id"],
-                name=result["name"],
-                rank=result["rank"],
-                common_name=result.get("preferred_common_name")
-            )
+            # Cache the result
+            db.save_branch(taxon_id, result)
 
             return result
         except requests.RequestException as e:
