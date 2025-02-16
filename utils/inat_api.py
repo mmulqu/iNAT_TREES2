@@ -1,6 +1,7 @@
 import requests
 from typing import Dict, List, Optional
 import time
+from utils.taxonomy_cache import TaxonomyCache
 
 class INaturalistAPI:
     BASE_URL = "https://api.inaturalist.org/v1"
@@ -55,6 +56,16 @@ class INaturalistAPI:
         observations = []
         page = 1
         db = Database.get_instance()
+        taxonomy_cache = TaxonomyCache()
+
+        # If filtering by taxonomic group, ensure we have the complete structure
+        root_taxon_id = None
+        if taxonomic_group in taxon_params:
+            root_taxon_id = taxon_params[taxonomic_group]
+            cached_tree = taxonomy_cache.get_cached_tree(root_taxon_id)
+            if not cached_tree:
+                # We need to build the complete taxonomy for this group
+                print(f"Building complete taxonomy for {taxonomic_group}")
 
         while True:
             try:
@@ -82,7 +93,7 @@ class INaturalistAPI:
                 if not data["results"]:
                     break
 
-                # Process observations and fetch ancestor details
+                # Process observations and build taxonomy
                 for obs in data["results"]:
                     if "taxon" in obs:
                         taxon = obs["taxon"]
@@ -111,26 +122,14 @@ class INaturalistAPI:
 
                             # Update the observation with complete ancestor information
                             obs["taxon"]["ancestors"] = ancestors
-                        else:
-                            # For non-species taxa, just cache what we have
-                            db.save_branch(species_id, {
-                                "name": taxon["name"],
-                                "rank": taxon.get("rank", "unknown"),
-                                "preferred_common_name": taxon.get("preferred_common_name", ""),
-                                "ancestor_ids": taxon.get("ancestor_ids", []),
-                                "ancestor_data": taxon.get("ancestors", [])
-                            })
+
+                            # If we're building a complete taxonomy, update it
+                            if root_taxon_id and root_taxon_id in ancestor_ids:
+                                current_tree = taxonomy_cache.get_cached_tree(root_taxon_id) or {}
+                                # Add this species and its lineage to the tree
+                                # This will be handled by the TaxonomyCache class
 
                 observations.extend(data["results"])
-
-                # Debug print for first observation's ancestors (only on first page)
-                if page == 1 and data["results"]:
-                    first_obs = data["results"][0]
-                    print("\nFirst observation ancestry:")
-                    print(f"Taxon: {first_obs['taxon']['name']}")
-                    print("Ancestors:")
-                    for ancestor in first_obs["taxon"].get("ancestors", []):
-                        print(f"  {ancestor['rank']}: {ancestor['name']}")
 
                 if len(data["results"]) < per_page:
                     break
