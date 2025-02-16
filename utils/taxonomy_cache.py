@@ -1,5 +1,5 @@
-from typing import Dict, List, Optional, Set
 import json
+from typing import Dict, List, Optional, Set
 from datetime import datetime, timezone
 import psycopg2
 from psycopg2.extras import Json
@@ -7,211 +7,277 @@ import os
 
 class TaxonomyCache:
     def __init__(self):
-        self.conn = psycopg2.connect(os.environ["DATABASE_URL"])
-        self._ensure_tables()
+        self.conn = None
+        self.connect()
+
+    def connect(self) -> bool:
+        """Establish database connection with proper error handling."""
+        try:
+            if self.conn is None or self.conn.closed:
+                self.conn = psycopg2.connect(os.environ["DATABASE_URL"])
+                self._ensure_tables()
+                return True
+        except Exception as e:
+            print(f"TaxonomyCache database connection error: {e}")
+            self.conn = None
+        return False
 
     def _ensure_tables(self):
         """Ensure all required tables and indices exist."""
-        with self.conn.cursor() as cur:
-            # Create taxonomy_structure table with improved schema
-            cur.execute("""
-                DO $$ 
-                BEGIN
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
                     CREATE TABLE IF NOT EXISTS taxonomy_structure (
                         root_id INTEGER PRIMARY KEY,
                         complete_subtree JSONB NOT NULL,
                         species_count INTEGER NOT NULL,
                         last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                         confidence_complete BOOLEAN DEFAULT FALSE,
-                        CONSTRAINT valid_species_count CHECK (species_count >= 0)
+                        ancestor_chain INTEGER[] NOT NULL DEFAULT '{}'
                     );
 
-                    -- Add ancestor_chain column if it doesn't exist
-                    IF NOT EXISTS (
-                        SELECT 1 
-                        FROM information_schema.columns 
-                        WHERE table_name='taxonomy_structure' 
-                        AND column_name='ancestor_chain'
-                    ) THEN
-                        ALTER TABLE taxonomy_structure 
-                        ADD COLUMN ancestor_chain INTEGER[] NOT NULL DEFAULT '{}';
-                    END IF;
+                    CREATE INDEX IF NOT EXISTS taxonomy_ancestor_chain_idx 
+                    ON taxonomy_structure USING GIN(ancestor_chain);
 
-                    -- Create filtered_trees table if it doesn't exist
+                    CREATE INDEX IF NOT EXISTS taxonomy_subtree_idx 
+                    ON taxonomy_structure USING GIN(complete_subtree jsonb_path_ops);
+
                     CREATE TABLE IF NOT EXISTS filtered_trees (
                         cache_key TEXT PRIMARY KEY,
                         filtered_tree JSONB NOT NULL,
                         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                     );
-                END $$;
 
-                -- Create necessary indices
-                CREATE INDEX IF NOT EXISTS taxonomy_ancestor_chain_idx 
-                ON taxonomy_structure USING GIN(ancestor_chain);
-
-                CREATE INDEX IF NOT EXISTS taxonomy_subtree_idx 
-                ON taxonomy_structure USING GIN(complete_subtree jsonb_path_ops);
-
-                CREATE INDEX IF NOT EXISTS filtered_trees_created_idx 
-                ON filtered_trees(created_at);
-            """)
-            self.conn.commit()
+                    CREATE INDEX IF NOT EXISTS filtered_trees_created_idx 
+                    ON filtered_trees(created_at);
+                """)
+                self.conn.commit()
+        except Exception as e:
+            print(f"Error creating tables: {e}")
+            if self.conn:
+                self.conn.rollback()
 
     def get_cached_tree(self, root_id: int, max_age_days: int = 30) -> Optional[Dict]:
         """Retrieve a cached taxonomy tree with age validation."""
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                SELECT 
-                    complete_subtree,
-                    last_updated,
-                    confidence_complete,
-                    species_count,
-                    ancestor_chain
-                FROM taxonomy_structure
-                WHERE root_id = %s
-                AND last_updated > NOW() - INTERVAL '%s days'
-            """, (root_id, max_age_days))
+        if not self.connect():
+            return None
 
-            result = cur.fetchone()
-            if result and result[2]:  # Check confidence_complete flag
-                return {
-                    'tree': result[0],
-                    'ancestor_chain': result[4] or []
-                }
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT 
+                        complete_subtree,
+                        last_updated,
+                        confidence_complete,
+                        species_count,
+                        ancestor_chain
+                    FROM taxonomy_structure
+                    WHERE root_id = %s
+                    AND last_updated > NOW() - INTERVAL '%s days'
+                """, (root_id, max_age_days))
+
+                result = cur.fetchone()
+                if result and result[2]:  # Check confidence_complete flag
+                    return {
+                        'tree': result[0],
+                        'ancestor_chain': result[4] or []
+                    }
+        except Exception as e:
+            print(f"Error retrieving cached tree: {e}")
         return None
 
-    def get_ancestors(self, taxon_id: int) -> List[int]:
-        """Get ancestor IDs for a given taxon from the taxa table."""
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                SELECT ancestor_ids
-                FROM taxa
-                WHERE taxon_id = %s
-            """, (taxon_id,))
-            result = cur.fetchone()
-            return result[0] if result else []
+    def build_tree_from_taxa(self, root_id: int, species_ids: List[int]) -> Optional[Dict]:
+        """Build complete taxonomy tree from taxa table."""
+        if not self.connect():
+            return None
 
-    def build_ancestor_chain(self, species_id: int) -> List[int]:
-        """Build complete ancestor chain for a species."""
-        ancestors = self.get_ancestors(species_id)
-        if not ancestors:
-            return []
+        try:
+            print(f"Building tree for root {root_id} with {len(species_ids)} species")
 
-        # Add the species itself to the chain
-        chain = [species_id]
+            # Initialize tree with root node
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT name, rank, common_name
+                    FROM taxa
+                    WHERE taxon_id = %s
+                """, (root_id,))
+                root_data = cur.fetchone()
+                if not root_data:
+                    print(f"Root taxon {root_id} not found")
+                    return None
 
-        # Process each ancestor
-        for ancestor_id in ancestors:
-            chain.append(ancestor_id)
-            parent_ancestors = self.get_ancestors(ancestor_id)
-            chain.extend(parent_ancestors)
+                tree = {
+                    'id': root_id,
+                    'name': root_data[0],
+                    'rank': root_data[1],
+                    'common_name': root_data[2],
+                    'children': {}
+                }
 
-        # Remove duplicates while preserving order
-        return list(dict.fromkeys(chain))
+            # Get all species and their ancestors
+            species_nodes = {}
+            for species_id in species_ids:
+                with self.conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT taxon_id, name, rank, common_name, ancestor_ids
+                        FROM taxa
+                        WHERE taxon_id = %s
+                    """, (species_id,))
+                    species_data = cur.fetchone()
+
+                    if species_data:
+                        species_nodes[species_id] = {
+                            'id': species_id,
+                            'name': species_data[1],
+                            'rank': 'species',
+                            'common_name': species_data[3],
+                            'ancestor_ids': species_data[4] or []
+                        }
+
+            # Build tree structure
+            for species_id, species_node in species_nodes.items():
+                current_level = tree['children']
+                ancestor_ids = species_node['ancestor_ids']
+
+                for ancestor_id in ancestor_ids:
+                    if ancestor_id == root_id:
+                        continue
+
+                    if ancestor_id not in current_level:
+                        # Get ancestor data
+                        with self.conn.cursor() as cur:
+                            cur.execute("""
+                                SELECT name, rank, common_name
+                                FROM taxa
+                                WHERE taxon_id = %s
+                            """, (ancestor_id,))
+                            ancestor_data = cur.fetchone()
+                            if ancestor_data:
+                                current_level[ancestor_id] = {
+                                    'id': ancestor_id,
+                                    'name': ancestor_data[0],
+                                    'rank': ancestor_data[1],
+                                    'common_name': ancestor_data[2],
+                                    'children': {}
+                                }
+                    if ancestor_id in current_level:
+                        current_level = current_level[ancestor_id]['children']
+
+                # Add species node
+                if species_id not in current_level:
+                    current_level[species_id] = {
+                        'id': species_id,
+                        'name': species_node['name'],
+                        'rank': 'species',
+                        'common_name': species_node['common_name'],
+                        'children': {}
+                    }
+
+            return tree
+        except Exception as e:
+            print(f"Error building tree: {e}")
+            return None
 
     def save_tree(self, root_id: int, tree: Dict, species_ids: List[int]):
-        """Save a complete taxonomy tree with ancestor chains."""
-        # Build unique ancestor chains for all species
-        all_chains = set()
-        for species_id in species_ids:
-            chain = self.build_ancestor_chain(species_id)
-            all_chains.update(chain)
+        """Save complete taxonomy tree."""
+        if not self.connect():
+            return
 
-        with self.conn as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO taxonomy_structure 
-                    (root_id, complete_subtree, species_count, last_updated, 
-                     confidence_complete, ancestor_chain)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (root_id) DO UPDATE
-                    SET complete_subtree = EXCLUDED.complete_subtree,
-                        species_count = EXCLUDED.species_count,
-                        last_updated = EXCLUDED.last_updated,
-                        confidence_complete = EXCLUDED.confidence_complete,
-                        ancestor_chain = EXCLUDED.ancestor_chain
-                """, (
-                    root_id,
-                    Json(tree),
-                    len(species_ids),
-                    datetime.now(timezone.utc),
-                    True,
-                    list(all_chains)
-                ))
+        try:
+            # Get ancestor chain from the first species (they should share common ancestors)
+            ancestor_chain = set()
+            if species_ids:
+                with self.conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT ancestor_ids
+                        FROM taxa
+                        WHERE taxon_id = %s
+                    """, (species_ids[0],))
+                    result = cur.fetchone()
+                    if result and result[0]:
+                        ancestor_chain.update(result[0])
 
-    def get_filtered_user_tree(self, root_id: int, user_species_ids: List[int]) -> Optional[Dict]:
-        """Get a filtered tree for user species with ancestor chain validation."""
-        cache_key = f"{root_id}_{sorted(user_species_ids)}"
-
-        # Check cached filtered tree
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                SELECT filtered_tree
-                FROM filtered_trees
-                WHERE cache_key = %s
-                AND created_at > NOW() - INTERVAL '1 day'
-            """, (cache_key,))
-
-            cached = cur.fetchone()
-            if cached:
-                return cached[0]
-
-        # Get complete tree and validate against ancestor chains
-        cached_data = self.get_cached_tree(root_id)
-        if not cached_data:
-            return None
-
-        complete_tree = cached_data['tree']
-        ancestor_chain = set(cached_data['ancestor_chain'])
-
-        # Validate species are in the ancestor chain
-        valid_species = [
-            species_id for species_id in user_species_ids 
-            if species_id in ancestor_chain
-        ]
-
-        if not valid_species:
-            return None
-
-        filtered_tree = self._filter_tree_efficient(complete_tree, set(valid_species))
-
-        # Cache the filtered tree
-        if filtered_tree:
             with self.conn as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO filtered_trees (cache_key, filtered_tree)
-                        VALUES (%s, %s)
-                        ON CONFLICT (cache_key) 
-                        DO UPDATE SET filtered_tree = EXCLUDED.filtered_tree,
-                                    created_at = CURRENT_TIMESTAMP
-                    """, (cache_key, Json(filtered_tree)))
+                        INSERT INTO taxonomy_structure 
+                        (root_id, complete_subtree, species_count, last_updated, 
+                         confidence_complete, ancestor_chain)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (root_id) DO UPDATE
+                        SET complete_subtree = EXCLUDED.complete_subtree,
+                            species_count = EXCLUDED.species_count,
+                            last_updated = EXCLUDED.last_updated,
+                            confidence_complete = EXCLUDED.confidence_complete,
+                            ancestor_chain = EXCLUDED.ancestor_chain
+                    """, (
+                        root_id,
+                        Json(tree),
+                        len(species_ids),
+                        datetime.now(timezone.utc),
+                        True,
+                        sorted(list(ancestor_chain))
+                    ))
+        except Exception as e:
+            print(f"Error saving tree: {e}")
+            if self.conn:
+                self.conn.rollback()
 
-        return filtered_tree
+    def get_filtered_user_tree(self, root_id: int, user_species_ids: List[int]) -> Optional[Dict]:
+        """Get a filtered tree for user species."""
+        if not self.connect():
+            return None
 
-    def _filter_tree_efficient(self, complete_tree: Dict, keep_species: Set[int]) -> Optional[Dict]:
-        """Optimized tree filtering with ancestor chain validation."""
-        valid_paths = set()
+        try:
+            cache_key = f"{root_id}_{sorted(user_species_ids)}"
 
-        def find_valid_paths(node: Dict, current_path: List[int]):
-            node_id = node.get('id')
-            if not node_id:
-                return
+            # Check filtered trees cache
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT filtered_tree
+                    FROM filtered_trees
+                    WHERE cache_key = %s
+                    AND created_at > NOW() - INTERVAL '1 day'
+                """, (cache_key,))
+                cached = cur.fetchone()
+                if cached:
+                    return cached[0]
 
-            current_path.append(node_id)
-
-            if node.get('rank') == 'species' and node_id in keep_species:
-                valid_paths.update(current_path)
-
-            for child in node.get('children', {}).values():
-                find_valid_paths(child, current_path.copy())
-
-        find_valid_paths(complete_tree, [])
-
-        def prune_tree(node: Dict) -> Optional[Dict]:
-            node_id = node.get('id')
-            if not node_id or node_id not in valid_paths:
+            # Build tree if not cached
+            tree = self.build_tree_from_taxa(root_id, user_species_ids)
+            if not tree:
                 return None
+
+            # Save complete tree
+            self.save_tree(root_id, tree, user_species_ids)
+
+            # Filter tree
+            filtered_tree = self._filter_tree(tree, set(user_species_ids))
+            if filtered_tree:
+                try:
+                    with self.conn as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO filtered_trees (cache_key, filtered_tree)
+                                VALUES (%s, %s)
+                                ON CONFLICT (cache_key) 
+                                DO UPDATE SET 
+                                    filtered_tree = EXCLUDED.filtered_tree,
+                                    created_at = CURRENT_TIMESTAMP
+                            """, (cache_key, Json(filtered_tree)))
+                except Exception as e:
+                    print(f"Error caching filtered tree: {e}")
+
+            return filtered_tree
+        except Exception as e:
+            print(f"Error getting filtered tree: {e}")
+            return None
+
+    def _filter_tree(self, tree: Dict, species_ids: Set[int]) -> Optional[Dict]:
+        """Filter tree to only include paths to specified species."""
+        def prune_tree(node: Dict) -> Optional[Dict]:
+            if node.get('rank') == 'species':
+                return node if node.get('id') in species_ids else None
 
             pruned_children = {}
             for child_id, child in node.get('children', {}).items():
@@ -219,11 +285,10 @@ class TaxonomyCache:
                 if pruned_child:
                     pruned_children[child_id] = pruned_child
 
-            if pruned_children or node.get('rank') == 'species':
+            if pruned_children:
                 filtered_node = node.copy()
                 filtered_node['children'] = pruned_children
                 return filtered_node
-
             return None
 
-        return prune_tree(complete_tree)
+        return prune_tree(tree)
