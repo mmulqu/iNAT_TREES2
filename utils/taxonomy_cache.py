@@ -15,39 +15,58 @@ class TaxonomyCache:
         with self.conn.cursor() as cur:
             # Create taxonomy_structure table with improved schema
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS taxonomy_structure (
-                    root_id INTEGER PRIMARY KEY,
-                    complete_subtree JSONB NOT NULL,
-                    species_count INTEGER NOT NULL,
-                    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    confidence_complete BOOLEAN DEFAULT FALSE,
-                    ancestor_chain INTEGER[] NOT NULL DEFAULT '{}',
-                    CONSTRAINT valid_species_count CHECK (species_count >= 0)
-                );
+                DO $$ 
+                BEGIN
+                    CREATE TABLE IF NOT EXISTS taxonomy_structure (
+                        root_id INTEGER PRIMARY KEY,
+                        complete_subtree JSONB NOT NULL,
+                        species_count INTEGER NOT NULL,
+                        last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        confidence_complete BOOLEAN DEFAULT FALSE,
+                        CONSTRAINT valid_species_count CHECK (species_count >= 0)
+                    );
 
+                    -- Add ancestor_chain column if it doesn't exist
+                    IF NOT EXISTS (
+                        SELECT 1 
+                        FROM information_schema.columns 
+                        WHERE table_name='taxonomy_structure' 
+                        AND column_name='ancestor_chain'
+                    ) THEN
+                        ALTER TABLE taxonomy_structure 
+                        ADD COLUMN ancestor_chain INTEGER[] NOT NULL DEFAULT '{}';
+                    END IF;
+
+                    -- Create filtered_trees table if it doesn't exist
+                    CREATE TABLE IF NOT EXISTS filtered_trees (
+                        cache_key TEXT PRIMARY KEY,
+                        filtered_tree JSONB NOT NULL,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    );
+                END $$;
+
+                -- Create necessary indices
                 CREATE INDEX IF NOT EXISTS taxonomy_ancestor_chain_idx 
                 ON taxonomy_structure USING GIN(ancestor_chain);
 
                 CREATE INDEX IF NOT EXISTS taxonomy_subtree_idx 
                 ON taxonomy_structure USING GIN(complete_subtree jsonb_path_ops);
+
+                CREATE INDEX IF NOT EXISTS filtered_trees_created_idx 
+                ON filtered_trees(created_at);
             """)
             self.conn.commit()
 
     def get_cached_tree(self, root_id: int, max_age_days: int = 30) -> Optional[Dict]:
-        """
-        Retrieve a cached taxonomy tree with age validation.
-
-        Args:
-            root_id: The root taxon ID to retrieve
-            max_age_days: Maximum age of cached data in days
-        """
+        """Retrieve a cached taxonomy tree with age validation."""
         with self.conn.cursor() as cur:
             cur.execute("""
                 SELECT 
                     complete_subtree,
                     last_updated,
                     confidence_complete,
-                    species_count
+                    species_count,
+                    ancestor_chain
                 FROM taxonomy_structure
                 WHERE root_id = %s
                 AND last_updated > NOW() - INTERVAL '%s days'
@@ -55,52 +74,48 @@ class TaxonomyCache:
 
             result = cur.fetchone()
             if result and result[2]:  # Check confidence_complete flag
-                return result[0]
+                return {
+                    'tree': result[0],
+                    'ancestor_chain': result[4] or []
+                }
         return None
 
-    def build_ancestor_chain(self, species_id: int) -> List[int]:
-        """Build complete ancestor chain for a species using cached data."""
+    def get_ancestors(self, taxon_id: int) -> List[int]:
+        """Get ancestor IDs for a given taxon from the taxa table."""
         with self.conn.cursor() as cur:
             cur.execute("""
-                WITH RECURSIVE ancestry AS (
-                    SELECT 
-                        taxon_id,
-                        ancestor_ids,
-                        1 as level
-                    FROM taxa
-                    WHERE taxon_id = %s
+                SELECT ancestor_ids
+                FROM taxa
+                WHERE taxon_id = %s
+            """, (taxon_id,))
+            result = cur.fetchone()
+            return result[0] if result else []
 
-                    UNION
+    def build_ancestor_chain(self, species_id: int) -> List[int]:
+        """Build complete ancestor chain for a species."""
+        ancestors = self.get_ancestors(species_id)
+        if not ancestors:
+            return []
 
-                    SELECT 
-                        t.taxon_id,
-                        t.ancestor_ids,
-                        a.level + 1
-                    FROM taxa t
-                    INNER JOIN ancestry a ON t.taxon_id = ANY(a.ancestor_ids)
-                    WHERE t.rank != 'species'
-                )
-                SELECT DISTINCT taxon_id
-                FROM ancestry
-                ORDER BY level DESC;
-            """, (species_id,))
+        # Add the species itself to the chain
+        chain = [species_id]
 
-            return [row[0] for row in cur.fetchall()]
+        # Process each ancestor
+        for ancestor_id in ancestors:
+            chain.append(ancestor_id)
+            parent_ancestors = self.get_ancestors(ancestor_id)
+            chain.extend(parent_ancestors)
+
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(chain))
 
     def save_tree(self, root_id: int, tree: Dict, species_ids: List[int]):
-        """
-        Save a complete taxonomy tree with improved metadata.
-
-        Args:
-            root_id: The root taxon ID
-            tree: The complete taxonomy tree
-            species_ids: List of species IDs in the tree
-        """
-        # Build ancestor chains for all species
-        ancestor_chains = set()
+        """Save a complete taxonomy tree with ancestor chains."""
+        # Build unique ancestor chains for all species
+        all_chains = set()
         for species_id in species_ids:
             chain = self.build_ancestor_chain(species_id)
-            ancestor_chains.update(chain)
+            all_chains.update(chain)
 
         with self.conn as conn:
             with conn.cursor() as cur:
@@ -121,20 +136,14 @@ class TaxonomyCache:
                     len(species_ids),
                     datetime.now(timezone.utc),
                     True,
-                    list(ancestor_chains)
+                    list(all_chains)
                 ))
 
     def get_filtered_user_tree(self, root_id: int, user_species_ids: List[int]) -> Optional[Dict]:
-        """
-        Get an efficiently filtered tree for user species with caching.
-
-        Args:
-            root_id: The root taxon ID
-            user_species_ids: List of species IDs to include
-        """
-        # First check if we have a cached filtered tree for this exact combination
+        """Get a filtered tree for user species with ancestor chain validation."""
         cache_key = f"{root_id}_{sorted(user_species_ids)}"
 
+        # Check cached filtered tree
         with self.conn.cursor() as cur:
             cur.execute("""
                 SELECT filtered_tree
@@ -147,12 +156,24 @@ class TaxonomyCache:
             if cached:
                 return cached[0]
 
-        # If no cached filtered tree, get the complete tree and filter it
-        complete_tree = self.get_cached_tree(root_id)
-        if not complete_tree:
+        # Get complete tree and validate against ancestor chains
+        cached_data = self.get_cached_tree(root_id)
+        if not cached_data:
             return None
 
-        filtered_tree = self._filter_tree_efficient(complete_tree, set(user_species_ids))
+        complete_tree = cached_data['tree']
+        ancestor_chain = set(cached_data['ancestor_chain'])
+
+        # Validate species are in the ancestor chain
+        valid_species = [
+            species_id for species_id in user_species_ids 
+            if species_id in ancestor_chain
+        ]
+
+        if not valid_species:
+            return None
+
+        filtered_tree = self._filter_tree_efficient(complete_tree, set(valid_species))
 
         # Cache the filtered tree
         if filtered_tree:
@@ -169,7 +190,7 @@ class TaxonomyCache:
         return filtered_tree
 
     def _filter_tree_efficient(self, complete_tree: Dict, keep_species: Set[int]) -> Optional[Dict]:
-        """Optimized tree filtering with path caching."""
+        """Optimized tree filtering with ancestor chain validation."""
         valid_paths = set()
 
         def find_valid_paths(node: Dict, current_path: List[int]):
@@ -185,7 +206,6 @@ class TaxonomyCache:
             for child in node.get('children', {}).values():
                 find_valid_paths(child, current_path.copy())
 
-        # First pass: identify all valid paths
         find_valid_paths(complete_tree, [])
 
         def prune_tree(node: Dict) -> Optional[Dict]:
@@ -206,5 +226,4 @@ class TaxonomyCache:
 
             return None
 
-        # Second pass: create filtered tree
         return prune_tree(complete_tree)
