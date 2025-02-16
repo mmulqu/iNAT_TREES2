@@ -1,0 +1,129 @@
+class TreeBuilder:
+    @staticmethod
+    def build_taxonomy_tree(taxa_data: List[Dict]) -> Dict:
+        """
+        Build a complete taxonomy tree from taxa data.
+        
+        Args:
+            taxa_data: List of dictionaries containing taxon information
+                      Each dict should have: id, name, rank, ancestor_ids
+        """
+        # Initialize the complete tree
+        complete_tree = {}
+        
+        def add_taxon_to_tree(taxon: Dict, ancestors: List[int]):
+            """Add a single taxon and its ancestors to the tree."""
+            current_dict = complete_tree
+            
+            # First add all ancestors in order
+            for ancestor_id in ancestors:
+                # Find ancestor data
+                ancestor_data = next(
+                    (t for t in taxa_data if t['taxon_id'] == ancestor_id), 
+                    None
+                )
+                if ancestor_data:
+                    if ancestor_id not in current_dict:
+                        current_dict[ancestor_id] = {
+                            'id': ancestor_id,
+                            'name': ancestor_data['name'],
+                            'rank': ancestor_data['rank'],
+                            'children': {}
+                        }
+                    current_dict = current_dict[ancestor_id]['children']
+            
+            # Then add the taxon itself
+            if taxon['taxon_id'] not in current_dict:
+                current_dict[taxon['taxon_id']] = {
+                    'id': taxon['taxon_id'],
+                    'name': taxon['name'],
+                    'rank': taxon['rank'],
+                    'children': {}
+                }
+        
+        # Process each taxon
+        for taxon in taxa_data:
+            # Parse ancestor_ids from string to list of integers
+            try:
+                ancestor_ids = eval(taxon['ancestor_ids']) if isinstance(taxon['ancestor_ids'], str) else taxon['ancestor_ids']
+                if ancestor_ids:
+                    add_taxon_to_tree(taxon, ancestor_ids)
+            except Exception as e:
+                print(f"Error processing taxon {taxon['taxon_id']}: {e}")
+        
+        return complete_tree
+
+    @staticmethod
+    def find_root_node(tree: Dict, root_id: int) -> Optional[Dict]:
+        """Find and extract the subtree starting from a specific root ID."""
+        def find_node(current_tree: Dict, target_id: int) -> Optional[Dict]:
+            # Check if the current node is our target
+            for node_id, node_data in current_tree.items():
+                if node_id == target_id:
+                    return node_data
+                
+                # Recursively search children
+                if 'children' in node_data:
+                    result = find_node(node_data['children'], target_id)
+                    if result:
+                        return result
+            return None
+        
+        return find_node(tree, root_id)
+
+    @staticmethod
+    def collect_all_taxa_ids(tree: Dict) -> Set[int]:
+        """Collect all taxon IDs in the tree."""
+        taxa_ids = set()
+        
+        def traverse(node: Dict):
+            if 'id' in node:
+                taxa_ids.add(node['id'])
+            for child in node.get('children', {}).values():
+                traverse(child)
+        
+        traverse(tree)
+        return taxa_ids
+
+    @staticmethod
+    def validate_tree(tree: Dict) -> bool:
+        """Validate that the tree is properly structured."""
+        required_fields = {'id', 'name', 'rank', 'children'}
+        
+        def validate_node(node: Dict) -> bool:
+            # Check that all required fields are present
+            if not all(field in node for field in required_fields):
+                return False
+            
+            # Validate children recursively
+            for child in node['children'].values():
+                if not validate_node(child):
+                    return False
+            
+            return True
+        
+        return validate_node(tree)
+
+# Example usage:
+"""
+# Read taxa data from CSV
+taxa_data = pd.read_csv('your_taxa_data.csv')
+taxa_list = taxa_data.to_dict('records')
+
+# Build the complete tree
+builder = TreeBuilder()
+complete_tree = builder.build_taxonomy_tree(taxa_list)
+
+# Find the Amphibia subtree (20978 is the Amphibia class ID)
+amphibia_tree = builder.find_root_node(complete_tree, 20978)
+
+# Get all taxa IDs in the tree
+all_taxa = builder.collect_all_taxa_ids(amphibia_tree)
+
+# Save to taxonomy_structure
+taxonomy_cache.save_tree(
+    root_id=20978,
+    tree=amphibia_tree,
+    species_ids=[id for id in all_taxa if taxa_data[taxa_data['taxon_id'] == id]['rank'].iloc[0] == 'species']
+)
+"""
