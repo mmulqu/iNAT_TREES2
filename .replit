@@ -5,7 +5,7 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "streamlit run app.py --server.address=0.0.0.0 --server.port=8501"]
+run = ["sh", "-c", "streamlit run app.py --server.address=0.0.0.0 --server.port=8502"]
 
 [workflows]
 runButton = "Project"
@@ -15,25 +15,6 @@ name = "Project"
 mode = "parallel"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Streamlit App"
-
-[[workflows.workflow]]
-name = "Streamlit App"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run app.py --server.address=0.0.0.0 --server.port=8501"
-waitForPort = 8501
-
 [[ports]]
 localPort = 5000
 externalPort = 80
@@ -41,3 +22,7 @@ externalPort = 80
 [[ports]]
 localPort = 8501
 externalPort = 3000
+
+[[ports]]
+localPort = 8502
+externalPort = 3001

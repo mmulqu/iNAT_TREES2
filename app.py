@@ -1,19 +1,36 @@
-import streamlit as st
-import plotly.graph_objects as go
-from utils.inat_api import INaturalistAPI
-from utils.data_processor import DataProcessor
-from utils.tree_builder import TreeBuilder
-import time
 import sys
 import logging
+import os
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
+
+try:
+    logger.info("Importing required packages...")
+    import streamlit as st
+    import plotly.graph_objects as go
+    from utils.inat_api import INaturalistAPI
+    from utils.data_processor import DataProcessor
+    from utils.tree_builder import TreeBuilder
+    import time
+    logger.info("All imports successful")
+except Exception as e:
+    logger.error(f"Failed to import required packages: {str(e)}")
+    sys.exit(1)
 
 # Page configuration
 try:
-    logger.info("Setting up page configuration...")
+    logger.info("Starting Streamlit application...")
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"Current working directory: {os.getcwd()}")
+
     st.set_page_config(
         page_title="iNaturalist Phylogenetic Tree Viewer",
         page_icon="🌳",
@@ -32,6 +49,7 @@ try:
     # Initialize session state
     if 'observations' not in st.session_state:
         st.session_state.observations = None
+        logger.info("Initialized session state")
 
     # Header
     st.markdown('<h1 class="main-header">iNaturalist Phylogenetic Tree Viewer 🌳</h1>', unsafe_allow_html=True)
@@ -64,7 +82,8 @@ try:
             if not st.session_state.observations:
                 with st.spinner("Fetching observations..."):
                     filter_group = None if taxonomic_group == "All Groups" else taxonomic_group
-                    st.session_state.observations = INaturalistAPI.get_user_observations(username, filter_group)
+                    api = INaturalistAPI()  # Create instance first
+                    st.session_state.observations = api.get_user_observations(username, filter_group)
 
             observations = st.session_state.observations
             logger.info(f"Retrieved {len(observations) if observations else 0} observations")

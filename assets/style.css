@@ -25,6 +25,7 @@
     border-radius: 0.5rem;
     border-left: 4px solid #2E7D32;
     color: #333333;
+    margin-bottom: 1rem;
 }
 
 .error-box {
@@ -33,6 +34,7 @@
     border-radius: 0.5rem;
     border-left: 4px solid #DC3545;
     color: #333333;
+    margin-bottom: 1rem;
 }
 
 /* Loading animation */
@@ -42,7 +44,7 @@
 
 /* Improve contrast for text */
 .stMarkdown, .stText {
-    color: #333333;
+    color: #333333 !important;
 }
 
 /* Style metrics */
@@ -51,6 +53,7 @@
     padding: 1rem;
     border-radius: 0.5rem;
     border: 1px solid #E9ECEF;
+    color: #333333;
 }
 
 /* Style select boxes */
@@ -71,4 +74,15 @@
 
 .stButton > button:hover {
     background-color: #1B5E20;
+}
+
+/* Ensure sidebar text is readable */
+.css-1d391kg, .css-12oz5g7 {
+    color: #333333 !important;
+}
+
+/* Style dataframe */
+.dataframe {
+    background-color: #FFFFFF;
+    color: #333333;
 }

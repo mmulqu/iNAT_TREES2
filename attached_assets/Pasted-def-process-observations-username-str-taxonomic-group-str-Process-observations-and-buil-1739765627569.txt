@@ -1,0 +1,101 @@
+def process_observations(username: str, taxonomic_group: str):
+    """Process observations and build taxonomy tree."""
+    from utils.database import Database
+    from utils.taxonomy_cache import TaxonomyCache
+    
+    print("\n=== Starting process_observations ===")
+    print(f"Username: {username}")
+    print(f"Taxonomic group: {taxonomic_group}")
+    
+    # Get observations from iNaturalist
+    api = INaturalistAPI()
+    observations = api.get_user_observations(username, taxonomic_group)
+    print(f"\nFetched {len(observations)} observations")
+    
+    # Collect all taxa data
+    taxa_data = []
+    db = Database.get_instance()
+    
+    print("\nProcessing observations...")
+    for obs in observations:
+        if 'taxon' in obs:
+            taxon = obs['taxon']
+            print(f"\nProcessing taxon: {taxon.get('name')} (ID: {taxon.get('id')})")
+            
+            # Debug print ancestor_ids
+            print(f"Ancestor IDs: {taxon.get('ancestor_ids')}")
+            
+            taxa_data.append({
+                'taxon_id': taxon['id'],
+                'name': taxon['name'],
+                'rank': taxon['rank'],
+                'ancestor_ids': taxon.get('ancestor_ids', [])
+            })
+            
+            # Also add ancestors to taxa data
+            if 'ancestors' in taxon:
+                print(f"Processing {len(taxon['ancestors'])} ancestors")
+                for ancestor in taxon['ancestors']:
+                    print(f"  Adding ancestor: {ancestor.get('name')} (ID: {ancestor.get('id')})")
+                    taxa_data.append({
+                        'taxon_id': ancestor['id'],
+                        'name': ancestor['name'],
+                        'rank': ancestor['rank'],
+                        'ancestor_ids': ancestor.get('ancestor_ids', [])
+                    })
+            else:
+                print("No ancestors found in taxon data")
+    
+    # Remove duplicates
+    print("\nRemoving duplicates...")
+    df = pd.DataFrame(taxa_data).drop_duplicates(subset=['taxon_id'])
+    print(f"Unique taxa count: {len(df)}")
+    
+    # Debug print data before tree building
+    print("\nData for tree building:")
+    print(df[['taxon_id', 'name', 'rank', 'ancestor_ids']].head())
+    
+    # Build the tree
+    print("\nBuilding taxonomy tree...")
+    builder = TreeBuilder()
+    complete_tree = builder.build_taxonomy_tree(df.to_dict('records'))
+    
+    if complete_tree is None:
+        print("ERROR: complete_tree is None after building!")
+        return None
+    
+    # Get the appropriate root ID for the taxonomic group
+    root_id = INaturalistAPI.taxon_params.get(taxonomic_group)
+    if not root_id:
+        print(f"ERROR: No root_id found for taxonomic group: {taxonomic_group}")
+        return None
+    
+    print(f"\nLooking for root node with ID: {root_id}")
+    # Extract the subtree for our taxonomic group
+    group_tree = builder.find_root_node(complete_tree, root_id)
+    if not group_tree:
+        print(f"ERROR: Could not find root node with ID: {root_id}")
+        return None
+    
+    # Get all taxa IDs and species IDs
+    print("\nCollecting taxa IDs...")
+    all_taxa = builder.collect_all_taxa_ids(group_tree)
+    print(f"Found {len(all_taxa)} total taxa")
+    
+    species_ids = [
+        tid for tid in all_taxa 
+        if df[df['taxon_id'] == tid]['rank'].iloc[0] == 'species'
+    ]
+    print(f"Found {len(species_ids)} species")
+    
+    # Save to cache
+    print("\nSaving to taxonomy cache...")
+    taxonomy_cache = TaxonomyCache()
+    taxonomy_cache.save_tree(
+        root_id=root_id,
+        tree=group_tree,
+        species_ids=species_ids
+    )
+    
+    print("=== Finished process_observations ===\n")
+    return group_tree

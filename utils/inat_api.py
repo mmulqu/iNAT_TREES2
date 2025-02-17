@@ -2,10 +2,8 @@ import requests
 from typing import Dict, List, Optional
 import time
 from utils.taxonomy_cache import TaxonomyCache
-
 from utils.tree_builder import TreeBuilder
 import pandas as pd
-
 
 class INaturalistAPI:
     BASE_URL = "https://api.inaturalist.org/v1"
@@ -21,8 +19,7 @@ class INaturalistAPI:
     }
 
     @staticmethod
-    def get_taxon_details(taxon_id: int,
-                          include_ancestors: bool = False) -> Optional[Dict]:
+    def get_taxon_details(taxon_id: int, include_ancestors: bool = False) -> Optional[Dict]:
         """Fetch detailed information about a specific taxon."""
         from utils.database import Database  # Import here to avoid circular dependency
 
@@ -42,8 +39,7 @@ class INaturalistAPI:
 
         try:
             print(f"Fetching taxon {taxon_id} from API")
-            response = requests.get(
-                f"{INaturalistAPI.BASE_URL}/taxa/{taxon_id}")
+            response = requests.get(f"{INaturalistAPI.BASE_URL}/taxa/{taxon_id}")
             response.raise_for_status()
             result = response.json()["results"][0]
 
@@ -55,7 +51,6 @@ class INaturalistAPI:
             print(f"Error fetching taxon {taxon_id}: {str(e)}")
             return None
 
-    @staticmethod
     @staticmethod
     def process_observations(username: str, taxonomic_group: str):
         """Process observations and build taxonomy tree."""
@@ -79,9 +74,7 @@ class INaturalistAPI:
         for obs in observations:
             if 'taxon' in obs:
                 taxon = obs['taxon']
-                print(
-                    f"\nProcessing taxon: {taxon.get('name')} (ID: {taxon.get('id')})"
-                )
+                print(f"\nProcessing taxon: {taxon.get('name')} (ID: {taxon.get('id')})")
 
                 # Debug print ancestor_ids
                 print(f"Ancestor IDs: {taxon.get('ancestor_ids')}")
@@ -97,18 +90,12 @@ class INaturalistAPI:
                 if 'ancestors' in taxon:
                     print(f"Processing {len(taxon['ancestors'])} ancestors")
                     for ancestor in taxon['ancestors']:
-                        print(
-                            f"  Adding ancestor: {ancestor.get('name')} (ID: {ancestor.get('id')})"
-                        )
+                        print(f"  Adding ancestor: {ancestor.get('name')} (ID: {ancestor.get('id')})")
                         taxa_data.append({
-                            'taxon_id':
-                            ancestor['id'],
-                            'name':
-                            ancestor['name'],
-                            'rank':
-                            ancestor['rank'],
-                            'ancestor_ids':
-                            ancestor.get('ancestor_ids', [])
+                            'taxon_id': ancestor['id'],
+                            'name': ancestor['name'],
+                            'rank': ancestor['rank'],
+                            'ancestor_ids': ancestor.get('ancestor_ids', [])
                         })
                 else:
                     print("No ancestors found in taxon data")
@@ -134,9 +121,7 @@ class INaturalistAPI:
         # Get the appropriate root ID for the taxonomic group
         root_id = INaturalistAPI.taxon_params.get(taxonomic_group)
         if not root_id:
-            print(
-                f"ERROR: No root_id found for taxonomic group: {taxonomic_group}"
-            )
+            print(f"ERROR: No root_id found for taxonomic group: {taxonomic_group}")
             return None
 
         print(f"\nLooking for root node with ID: {root_id}")
@@ -161,16 +146,16 @@ class INaturalistAPI:
         print("\nSaving to taxonomy cache...")
         taxonomy_cache = TaxonomyCache()
         taxonomy_cache.save_tree(root_id=root_id,
-                                 tree=group_tree,
-                                 species_ids=species_ids)
+                                tree=group_tree,
+                                species_ids=species_ids)
 
         print("=== Finished process_observations ===\n")
         return group_tree
 
     def get_user_observations(self,
-                              username: str,
-                              taxonomic_group: Optional[str] = None,
-                              per_page: int = 200) -> List[Dict]:
+                            username: str,
+                            taxonomic_group: Optional[str] = None,
+                            per_page: int = 200) -> List[Dict]:
         """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
         from utils.database import Database
 
@@ -204,7 +189,6 @@ class INaturalistAPI:
                     params["taxon_id"] = root_taxon_id
 
                 print(f"Making API request with params: {params}")
-
                 print(f"Making API request with params: {params}")
 
                 response = requests.get(
