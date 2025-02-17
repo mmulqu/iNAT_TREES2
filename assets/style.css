@@ -1,9 +1,7 @@
-
 /* Custom styles for the Streamlit app */
 .stApp {
     max-width: 1200px;
     margin: 0 auto;
-    background-color: #FFFFFF;
 }
 
 .main-header {
@@ -11,6 +9,7 @@
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 2rem;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
 
 .subheader {
@@ -25,6 +24,7 @@
     padding: 1rem;
     border-radius: 0.5rem;
     border-left: 4px solid #2E7D32;
+    color: #333333;
 }
 
 .error-box {
@@ -32,9 +32,43 @@
     padding: 1rem;
     border-radius: 0.5rem;
     border-left: 4px solid #DC3545;
+    color: #333333;
 }
 
 /* Loading animation */
 .stSpinner > div {
     border-color: #2E7D32 !important;
+}
+
+/* Improve contrast for text */
+.stMarkdown, .stText {
+    color: #333333;
+}
+
+/* Style metrics */
+.stMetric {
+    background-color: #F8F9FA;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #E9ECEF;
+}
+
+/* Style select boxes */
+.stSelectbox select {
+    background-color: #FFFFFF;
+    color: #333333;
+    border: 1px solid #CED4DA;
+}
+
+/* Style buttons */
+.stButton > button {
+    background-color: #2E7D32;
+    color: #FFFFFF;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+}
+
+.stButton > button:hover {
+    background-color: #1B5E20;
 }

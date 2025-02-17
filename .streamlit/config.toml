@@ -1,7 +1,16 @@
-
 [server]
 address = "0.0.0.0"
 port = 5000
 headless = true
-enableCORS = false
-enableWebsocketCompression = false
+enableCORS = true
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#2E7D32"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F4F1"
+textColor = "#111111"
+font = "sans-serif"
