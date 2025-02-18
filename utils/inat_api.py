@@ -152,10 +152,7 @@ class INaturalistAPI:
         print("=== Finished process_observations ===\n")
         return group_tree
 
-    def get_user_observations(self,
-                            username: str,
-                            taxonomic_group: Optional[str] = None,
-                            per_page: int = 200) -> List[Dict]:
+    def get_user_observations(self, username: str, taxonomic_group: Optional[str] = None, per_page: int = 200) -> List[Dict]:
         """Fetch observations for a given iNaturalist username with optional taxonomic filtering."""
         from utils.database import Database
 
@@ -166,11 +163,9 @@ class INaturalistAPI:
 
         # Get root taxon ID if taxonomic group is specified
         root_taxon_id = None
-        if taxonomic_group in INaturalistAPI.taxon_params:
-            root_taxon_id = INaturalistAPI.taxon_params[taxonomic_group]
-            print(
-                f"Using taxonomic filter for {taxonomic_group} (ID: {root_taxon_id})"
-            )
+        if taxonomic_group in self.taxon_params:
+            root_taxon_id = self.taxon_params[taxonomic_group]
+            print(f"Using taxonomic filter for {taxonomic_group} (ID: {root_taxon_id})")
 
         while True:
             try:
@@ -181,7 +176,7 @@ class INaturalistAPI:
                     "page": page,
                     "order": "desc",
                     "order_by": "created_at",
-                    "include[]": ["taxon", "ancestors"]
+                    "include": ["taxon", "ancestors"]  # Include both in a single list
                 }
 
                 # Add taxonomic filter if specified
@@ -189,10 +184,11 @@ class INaturalistAPI:
                     params["taxon_id"] = root_taxon_id
 
                 print(f"Making API request with params: {params}")
-                print(f"Making API request with params: {params}")
 
                 response = requests.get(
-                    f"{INaturalistAPI.BASE_URL}/observations", params=params)
+                    f"{self.BASE_URL}/observations",
+                    params=params
+                )
                 response.raise_for_status()
                 data = response.json()
 
@@ -212,37 +208,22 @@ class INaturalistAPI:
 
                             # Fetch and cache each ancestor's details
                             for aid in ancestor_ids:
-                                ancestor = INaturalistAPI.get_taxon_details(
-                                    aid)
+                                ancestor = self.get_taxon_details(aid)
                                 if ancestor:
                                     ancestors.append(ancestor)
                                     time.sleep(0.5)  # Rate limiting
 
                             # Save the species with complete information
-                            db.save_branch(
-                                species_id,
-                                {
-                                    "name":
-                                    taxon["name"],
-                                    "rank":
-                                    "species",  # Explicitly set species rank
-                                    "preferred_common_name":
-                                    taxon.get("preferred_common_name", ""),
-                                    "ancestor_ids":
-                                    ancestor_ids,  # Include full ancestry chain
-                                    "ancestor_data":
-                                    ancestors  # Store complete ancestor information
-                                })
+                            db.save_branch(species_id, {
+                                "name": taxon["name"],
+                                "rank": "species",
+                                "preferred_common_name": taxon.get("preferred_common_name", ""),
+                                "ancestor_ids": ancestor_ids,
+                                "ancestor_data": ancestors
+                            })
 
                             # Update the observation with complete ancestor information
                             obs["taxon"]["ancestors"] = ancestors
-
-                            # If we're building a complete taxonomy, update it
-                            if root_taxon_id and root_taxon_id in ancestor_ids:
-                                current_tree = taxonomy_cache.get_cached_tree(
-                                    root_taxon_id) or {}
-                                # Add this species and its lineage to the tree
-                                # This will be handled by the TaxonomyCache class
 
                 observations.extend(data["results"])
 
@@ -253,6 +234,8 @@ class INaturalistAPI:
                 time.sleep(1)  # Rate limiting
 
             except requests.RequestException as e:
+                print(f"API Error: {str(e)}")
+                print(f"Response content: {e.response.content if hasattr(e, 'response') else 'No response content'}")
                 raise Exception(f"Error fetching observations: {str(e)}")
 
         return observations
