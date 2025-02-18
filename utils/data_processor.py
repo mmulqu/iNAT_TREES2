@@ -3,6 +3,7 @@ from typing import List, Dict, Optional, Union, Any, Set, Tuple
 from utils.taxonomy_cache import TaxonomyCache
 from utils.database import Database
 from utils.data_utils import normalize_ancestors
+from utils.inat_api import INaturalistAPI  # Import INaturalistAPI directly
 
 class DataProcessor:
     TAXONOMIC_FILTERS = {
@@ -62,6 +63,13 @@ class DataProcessor:
                     skipped_count += 1
                     continue
 
+                # Ensure taxon and its ancestors are in DB
+                species_id = obs["taxon"]["id"]
+                # Ensure the species and (recursively) its ancestors are in the database.
+                record = INaturalistAPI.ensure_taxon_in_db(species_id)
+                if not record:
+                    print(f"Warning: Could not ensure taxon {species_id} in DB")
+
                 taxon = obs["taxon"]
 
                 # Normalize ancestor data immediately
@@ -99,7 +107,7 @@ class DataProcessor:
                 ancestor_names["stateofmatter"] = "Life"
                 ancestor_ids_by_rank["stateofmatter"] = 48460
 
-                # Process ancestors and build complete taxonomy
+                # Process ancestors and build complete taxonomy mapping
                 for ancestor in ancestors:
                     rank = ancestor.get('rank', '')
                     if rank:
@@ -109,25 +117,20 @@ class DataProcessor:
                 # Fill in missing ranks from ancestor_ids if available
                 if ancestor_ids:
                     db = Database.get_instance()
-
                     for aid in ancestor_ids:
-                        if isinstance(aid, (int, str)):
-                            try:
-                                aid = int(aid)
-                                # Skip if we already have this ID mapped
-                                if aid not in ancestor_ids_by_rank.values():
-                                    # Try to get cached data for this ancestor
-                                    cached_data = db.get_cached_branch(aid)
-                                    if cached_data:
-                                        rank = cached_data.get('rank', '')
-                                        if rank and rank not in ancestor_ids_by_rank:
-                                            ancestor_names[rank] = cached_data.get('name', '')
-                                            ancestor_ids_by_rank[rank] = aid
-                            except ValueError:
-                                print(f"Invalid ancestor ID: {aid}")
+                        try:
+                            aid_int = int(aid)
+                            if aid_int not in ancestor_ids_by_rank.values():
+                                cached_data = db.get_cached_branch(aid_int)
+                                if cached_data:
+                                    rank = cached_data.get('rank', '')
+                                    if rank and rank not in ancestor_ids_by_rank:
+                                        ancestor_names[rank] = cached_data.get('name', '')
+                                        ancestor_ids_by_rank[rank] = aid_int
+                        except ValueError:
+                            print(f"Invalid ancestor ID: {aid}")
 
-                # Ensure we have a complete taxonomy path
-                # Most iNaturalist taxa have these standard taxonomic ranks
+                # Check for missing standard ranks
                 std_ranks = {"kingdom", "phylum", "class", "order", "family", "genus"}
                 missing_ranks = std_ranks - set(ancestor_ids_by_rank.keys())
                 if missing_ranks and len(processed_data) == 0:
@@ -151,12 +154,10 @@ class DataProcessor:
                     processed_observation[rank] = ancestor_ids_by_rank.get(rank)
                     processed_observation[f"taxon_{rank}"] = ancestor_names.get(rank, "")
 
-                # For species rank, use the taxon's own ID and name
                 if taxon.get("rank") == "species":
                     processed_observation["species"] = taxon["id"]
                     processed_observation["taxon_species"] = taxon["name"]
 
-                # If this is a direct child of the filter taxon, add the relationship
                 if taxonomic_group and taxonomic_group in DataProcessor.TAXONOMIC_FILTERS:
                     filter_info = DataProcessor.TAXONOMIC_FILTERS[taxonomic_group]
                     filter_rank = next(iter(filter_info.keys()))
@@ -178,58 +179,115 @@ class DataProcessor:
         return pd.DataFrame(processed_data)
 
     @staticmethod
+    def get_full_ancestor_chain(species_id: int) -> List[int]:
+        """
+        Returns a complete chain (from root to species) for the given species.
+        It recursively ensures that each taxon in the chain exists in the DB.
+        """
+        print(f"\nGetting ancestor chain for species {species_id}")
+        DataProcessor.debug_taxon_record(species_id)
+        record = INaturalistAPI.ensure_taxon_in_db(species_id)
+        if not record:
+            print(f"No record found for taxon {species_id}")
+            return []
+        print(f"Taxon {species_id} record: ancestor_ids = {record.get('ancestor_ids')}")
+        chain = record.get("ancestor_ids", [])
+        print(f"Initial chain for {species_id}: {chain}")
+        if chain and chain[0] == 48460:  # ROOT_ID
+            chain = chain[1:]
+            print(f"Chain after skipping duplicate root: {chain}")
+        print(f"Ensuring all ancestors are in DB for {species_id}")
+        for aid in chain:
+            DataProcessor.debug_taxon_record(aid)
+            ancestor_record = INaturalistAPI.ensure_taxon_in_db(aid)
+            if ancestor_record:
+                print(f"  Ancestor {aid} record: ancestor_ids = {ancestor_record.get('ancestor_ids')}")
+            else:
+                print(f"  Warning: Could not ensure ancestor {aid}")
+        final_chain = [48460] + chain + [species_id]
+        print(f"Final chain for {species_id}: {final_chain}")
+        return final_chain
+
+    @staticmethod
+    def merge_branches_into_tree(species_ids: List[int]) -> Dict:
+        """
+        Given a list of species IDs, build (or update) the overall tree by merging each species' ancestor chain.
+        """
+        print("\nMerging branches into tree...")
+        tree = {
+            "id": 48460,
+            "name": "Life",
+            "rank": "stateofmatter",
+            "common_name": "Life",
+            "children": {}
+        }
+        db = Database.get_instance()
+
+        for species_id in species_ids:
+            print(f"\nProcessing species {species_id}")
+            chain = DataProcessor.get_full_ancestor_chain(species_id)
+            print(f"Got ancestor chain: {chain}")
+            current_node = tree
+            for taxon_id in chain:
+                key = str(taxon_id)
+                if key not in current_node["children"]:
+                    record = db.get_cached_branch(taxon_id)
+                    if record:
+                        print(f"[DEBUG] Found record for taxon {taxon_id}: {record}")
+                        current_node["children"][key] = {
+                            "id": record["id"],
+                            "name": record["name"],
+                            "rank": record["rank"],
+                            "common_name": record.get("common_name", ""),
+                            "children": {}
+                        }
+                        print(f"Added node {key} to tree: {current_node['children'][key]}")
+                    else:
+                        print(f"[DEBUG] No record found for taxon {taxon_id}")
+                        print(f"Warning: Missing taxon record for {taxon_id}")
+                        continue
+                else:
+                    print(f"Node {key} already exists in tree")
+                current_node = current_node["children"][key]
+        print(f"\nFinal tree structure:")
+        print(f"Root children count: {len(tree['children'])}")
+        return tree
+
+    @staticmethod
     def build_taxonomy_hierarchy(df: pd.DataFrame, taxonomic_group: Optional[str] = None) -> Dict:
-        """Build filtered taxonomy hierarchy using the cached structure."""
+        """
+        For each unique species in df, retrieve its ancestor chain from the DB (fetching missing taxa as needed)
+        and merge these chains into one tree.
+        """
         if df.empty:
             print("No data to build hierarchy from")
             return {}
 
         print("\nBuilding taxonomy hierarchy...")
-        taxonomy_cache = TaxonomyCache()
-
-        # Get unique species IDs from the observations
-        species_ids = []
-        for _, row in df.iterrows():
-            rank = row.get("rank")
-            if rank == "species" and pd.notna(row.get("taxon_id")):
-                species_ids.append(int(row["taxon_id"]))
-            elif pd.notna(row.get("species")):
-                species_ids.append(int(row["species"]))
-
-        species_ids = list(set(species_ids))  # Remove duplicates
-        print(f"Found {len(species_ids)} unique species")
-
-        # Get the appropriate root ID for the taxonomic group
+        print(f"Processing {len(df)} observations")
         root_id = None
-        if taxonomic_group and taxonomic_group in DataProcessor.TAXONOMIC_FILTERS:
-            root_id = DataProcessor.TAXONOMIC_FILTERS[taxonomic_group]["id"]
-            print(f"Found matching root for {taxonomic_group} with ID {root_id}")
+        if taxonomic_group:
+            root_id = DataProcessor.TAXONOMIC_FILTERS.get(taxonomic_group, {}).get("id")
+            print(f"Using root ID {root_id} for {taxonomic_group}")
+            taxonomy_cache = TaxonomyCache()
+            if root_id:
+                cached_tree = taxonomy_cache.get_cached_tree(root_id)
+                if cached_tree:
+                    print("Using cached complete tree")
+                    return cached_tree
 
-        if root_id and species_ids:
-            # Try to get filtered tree from cache
-            print("Checking cache for filtered tree...")
-            filtered_tree = taxonomy_cache.get_filtered_user_tree(root_id, species_ids)
-            if filtered_tree:
-                print("Using cached tree")
-                return filtered_tree
+        species_ids = list(set(df["taxon_id"].tolist()))
+        print(f"Found {len(species_ids)} unique species")
+        tree = DataProcessor.merge_branches_into_tree(species_ids)
 
-        # If no cache, build directly from observations
-        print("Building complete tree from observations...")
-        complete_tree = DataProcessor._build_complete_tree(df, taxonomic_group)
-
-        # Save the tree to cache if it was built successfully
-        if complete_tree and root_id and species_ids:
+        if root_id:
             try:
-                taxonomy_cache.save_tree(
-                    root_id=root_id,
-                    tree=complete_tree,
-                    species_ids=species_ids
-                )
-                print(f"Saved tree to cache with root {root_id}")
+                taxonomy_cache = TaxonomyCache()
+                taxonomy_cache.save_tree(root_id=root_id, tree=tree)
             except Exception as e:
                 print(f"Failed to save tree to cache: {e}")
 
-        return complete_tree
+        return tree
 
     @staticmethod
     def create_node(taxon_id: int, name: str, rank: str, common_name: str = "") -> Dict:
@@ -246,23 +304,17 @@ class DataProcessor:
     def _build_complete_tree(df: pd.DataFrame, taxonomic_group: Optional[str] = None) -> Dict:
         """Build a complete tree directly from observation data."""
         print("\nBuilding complete taxonomy tree...")
-
-        # Create Life node as the root
         tree = DataProcessor.create_node(
             taxon_id=48460,
             name="Life",
             rank="stateofmatter"
         )
-
-        # Define the order of ranks
         ranks = ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
-
-        # First collect all unique taxa by rank and their relationships
         taxa_by_rank = {rank: {} for rank in ranks}
-        parent_child_map = {}  # Track parent-child relationships
+        parent_child_map = {}
 
         for _, row in df.iterrows():
-            prev_id = 48460  # Life is the root
+            prev_id = 48460
             for rank in ranks:
                 taxon_id = row.get(rank)
                 if pd.notna(taxon_id):
@@ -274,30 +326,22 @@ class DataProcessor:
                             rank=rank,
                             common_name=row.get("common_name", "") if rank == "species" else ""
                         )
-                    # Record parent-child relationship
                     parent_child_map[taxon_id] = prev_id
                     prev_id = taxon_id
 
-        # Build the tree maintaining proper parent-child relationships
         def add_to_tree(node_id: int, parent_node: Dict) -> None:
-            """Recursively add nodes to the tree."""
             children = [tid for tid, pid in parent_child_map.items() if pid == node_id]
-
             for child_id in children:
-                # Find the child's data
                 child_data = None
                 for rank_data in taxa_by_rank.values():
                     if child_id in rank_data:
                         child_data = rank_data[child_id]
                         break
-
                 if child_data:
                     parent_node["children"][str(child_id)] = child_data
                     add_to_tree(child_id, child_data)
 
-        # Start building from Life
         add_to_tree(48460, tree)
-
         return tree
 
     @staticmethod
@@ -305,20 +349,13 @@ class DataProcessor:
         """Build taxonomy tree directly from DataFrame."""
         print("\nBuilding tree from DataFrame...")
         print(f"Processing {len(df)} rows")
-
-        # Debug print the DataFrame columns and a sample row
         print("\nDataFrame columns:", df.columns.tolist())
-        print("\nSample row data:")
         if not df.empty:
             sample_row = df.iloc[0]
             for rank in ["stateofmatter"] + DataProcessor.TAXONOMIC_RANKS:
                 print(f"{rank}: {sample_row.get(rank)}")
                 print(f"taxon_{rank}: {sample_row.get(f'taxon_{rank}')}")
-
-        # First pass: collect all unique taxa and their info
         taxa_info = {}
-
-        # Add Life as the root
         root = {
             "id": 48460,
             "name": "Life",
@@ -326,10 +363,7 @@ class DataProcessor:
             "common_name": "",
             "children": {}
         }
-
-        # Process all other taxa
         for _, row in df.iterrows():
-            # Add each taxon that exists in this row
             for rank in DataProcessor.TAXONOMIC_RANKS:
                 if pd.notna(row.get(rank)):
                     taxon_id = int(row[rank])
@@ -340,9 +374,7 @@ class DataProcessor:
                         else:
                             name = row[f"taxon_{rank}"]
                             common_name = ""
-
                         print(f"Adding taxon to info - ID: {taxon_id}, Rank: {rank}, Name: {name}")
-
                         taxa_info[taxon_id] = {
                             "id": taxon_id,
                             "name": name,
@@ -350,8 +382,6 @@ class DataProcessor:
                             "rank": rank,
                             "children": {}
                         }
-
-            # Also add the observation taxon if it's not a standard rank
             if pd.notna(row.get("taxon_id")) and row.get("rank") not in DataProcessor.TAXONOMIC_RANKS:
                 taxon_id = int(row["taxon_id"])
                 if taxon_id not in taxa_info:
@@ -363,41 +393,26 @@ class DataProcessor:
                         "children": {}
                     }
                     print(f"Adding observation taxon - ID: {taxon_id}, Rank: {row['rank']}, Name: {row['name']}")
-
         print(f"\nCollected {len(taxa_info)} unique taxa")
-
-        # Second pass: build hierarchy starting from Life
         for _, row in df.iterrows():
             current_level = root["children"]
-
-            # Build a full path for this observation
             path = []
             for rank in DataProcessor.TAXONOMIC_RANKS:
                 if pd.notna(row.get(rank)):
                     path.append((rank, int(row[rank])))
-
-            # If we have a path, add it to the tree
             if path:
-                # Process each node in the path
                 for i, (rank, taxon_id) in enumerate(path):
-                    str_id = str(taxon_id)  # Convert to string for dictionary key
-
+                    str_id = str(taxon_id)
                     if str_id not in current_level and taxon_id in taxa_info:
                         print(f"Adding node to tree - ID: {taxon_id}, Rank: {rank}")
                         current_level[str_id] = taxa_info[taxon_id].copy()
-
-                    # If this isn't the last node, move to its children
                     if i < len(path) - 1 and str_id in current_level:
                         current_level = current_level[str_id]["children"]
-
         print(f"\nFinal tree structure summary:")
         print(f"Root children count: {len(root['children'])}")
-
-        # Debug print the tree structure
         def print_tree(node, level=0):
             if not isinstance(node, dict):
                 return
-
             indent = "  " * level
             name = node.get("name", "Unknown")
             rank = node.get("rank", "Unknown")
@@ -405,10 +420,8 @@ class DataProcessor:
             print(f"{indent}{name} ({rank})")
             for child in children.values():
                 print_tree(child, level + 1)
-
         print("\nTree structure:")
         print_tree(root)
-
         return root
 
     @staticmethod
@@ -417,14 +430,10 @@ class DataProcessor:
         if not tree:
             print("Warning: Empty tree provided for conversion")
             return {}
-
         def convert_node(node: Dict) -> Dict:
-            """Convert a single node and its children."""
             if not isinstance(node, dict):
                 print(f"Warning: Invalid node type: {type(node)}")
                 return {}
-
-            # Create the new node structure
             new_node = {
                 "id": node.get("id"),
                 "name": node.get("name", ""),
@@ -432,11 +441,8 @@ class DataProcessor:
                 "common_name": node.get("common_name", ""),
                 "children": {}
             }
-
-            # Sort and process children
             children = node.get("children", {})
             if isinstance(children, dict):
-                # Sort children by rank and name
                 sorted_children = sorted(
                     children.items(),
                     key=lambda x: (
@@ -445,14 +451,44 @@ class DataProcessor:
                         x[1].get('name', '')
                     )
                 )
-
                 for child_id, child in sorted_children:
                     if isinstance(child, dict):
                         converted_child = convert_node(child)
                         if converted_child and converted_child.get("id"):
                             new_node["children"][str(child_id)] = converted_child
-
             return new_node
-
-        # Convert the entire tree
         return convert_node(tree)
+
+    @staticmethod
+    def debug_taxon_record(taxon_id: int):
+        """Print debug information about a taxon's API and DB records."""
+        print(f"\n=== Debug info for Taxon {taxon_id} ===")
+        print("\nFetching from API...")
+        api_record = INaturalistAPI.get_taxon_details(taxon_id)
+        print("API Record:")
+        print(f"  Name: {api_record.get('name', 'N/A')}")
+        print(f"  Rank: {api_record.get('rank', 'N/A')}")
+        print(f"  Common Name: {api_record.get('preferred_common_name', 'N/A')}")
+        print(f"  Ancestor IDs: {api_record.get('ancestor_ids', [])}")
+        print(f"  Full API record: {api_record}")
+        print("\nFetching from Database...")
+        db = Database.get_instance()
+        db_record = db.get_cached_branch(taxon_id)
+        if db_record:
+            print("DB Record:")
+            print(f"  Name: {db_record.get('name', 'N/A')}")
+            print(f"  Rank: {db_record.get('rank', 'N/A')}")
+            print(f"  Common Name: {db_record.get('common_name', 'N/A')}")
+            print(f"  Ancestor IDs: {db_record.get('ancestor_ids', [])}")
+            print(f"  Full DB record: {db_record}")
+        else:
+            print("DB Record: None")
+        print("\nComparison:")
+        if api_record and db_record:
+            print("  Fields match?")
+            print(f"    Name: {api_record.get('name') == db_record.get('name')}")
+            print(f"    Rank: {api_record.get('rank') == db_record.get('rank')}")
+            print(f"    Ancestor IDs: {api_record.get('ancestor_ids') == db_record.get('ancestor_ids')}")
+        else:
+            print("  Cannot compare - missing records")
+        print("=" * 50)
