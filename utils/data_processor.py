@@ -199,7 +199,7 @@ class DataProcessor:
         """
         print("\nMerging branches into tree...")
         tree = {
-            "id": 48460,
+            "id": 48460,  # ROOT_ID for "Life"
             "name": "Life",
             "rank": "stateofmatter",
             "common_name": "Life",
@@ -210,6 +210,9 @@ class DataProcessor:
         for species_id in species_ids:
             print(f"\nProcessing species {species_id}")
             chain = DataProcessor.get_full_ancestor_chain(species_id)
+            # Remove duplicate root if present
+            if chain and chain[0] == tree["id"]:
+                chain = chain[1:]
             print(f"Got ancestor chain: {chain}")
             current_node = tree
             for taxon_id in chain:
@@ -236,6 +239,7 @@ class DataProcessor:
         print(f"\nFinal tree structure:")
         print(f"Root children count: {len(tree['children'])}")
         return tree
+
 
     @staticmethod
     def build_taxonomy_hierarchy(df: pd.DataFrame, taxonomic_group: Optional[str] = None) -> Dict:
