@@ -12,8 +12,11 @@ runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
-mode = "parallel"
-author = "agent"
+author = 29498440
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py --server.address=0.0.0.0 --server.port=8502"
 
 [[ports]]
 localPort = 5000

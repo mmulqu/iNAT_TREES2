@@ -1,0 +1,46 @@
+2025-02-18 02:58:50,833 - __main__ - INFO - Importing required packages...
+2025-02-18 02:58:52,973 - __main__ - INFO - All imports successful
+2025-02-18 02:58:52,973 - __main__ - INFO - Starting Streamlit application...
+2025-02-18 02:58:52,973 - __main__ - INFO - Python version: 3.11.10 (main, Sep  7 2024, 01:03:31) [GCC 13.3.0]
+2025-02-18 02:58:52,973 - __main__ - INFO - Current working directory: /home/runner/workspace
+2025-02-18 02:58:53.065 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53,066 - __main__ - INFO - Loading custom CSS...
+2025-02-18 02:58:53.066 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.229 - streamlit - WARNING - 
+  Warning: to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run app.py [ARGUMENTS]
+2025-02-18 02:58:53.229 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.229 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.229 - streamlit.runtime.state.session_state_proxy - WARNING - Session state does not function when running a script without `streamlit run`
+2025-02-18 02:58:53.229 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.229 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53,229 - __main__ - INFO - Initialized session state
+2025-02-18 02:58:53.229 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.229 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.230 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-02-18 02:58:53.231 - streamlit.runtime.scriptrunner_utils.script_run_context - WARNING - Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
