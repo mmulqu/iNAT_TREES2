@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import DictCursor, Json
 from typing import Optional, Dict
 from datetime import datetime, timezone
+from utils.data_utils import normalize_ancestors  # Import from data_utils instead
 
 class Database:
     _instance = None
@@ -56,56 +57,73 @@ class Database:
             self.conn.commit()
 
     def get_cached_branch(self, taxon_id: int) -> Optional[Dict]:
-        self.connect()
-        if not self.conn:
-            return None
+        """Get a cached taxon branch from the database."""
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT name, rank, common_name, ancestor_ids, ancestor_data
+                    FROM taxa
+                    WHERE taxon_id = %s
+                """, (taxon_id,))
 
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("""
-            SELECT ancestor_data, name, rank, common_name, ancestor_ids
-            FROM taxa
-            WHERE taxon_id = %s
-            """, (taxon_id,))
-            result = cur.fetchone()
-            if result:
-                return {
-                    "ancestor_data": result["ancestor_data"],
-                    "name": result["name"],
-                    "rank": result["rank"],
-                    "common_name": result["common_name"],
-                    "ancestor_ids": result["ancestor_ids"]
-                }
+                result = cur.fetchone()
+                if result:
+                    name, rank, common_name, ancestor_ids, ancestor_data = result
+
+                    # Ensure ancestor_data is properly structured
+                    normalized_ancestors = []
+                    if ancestor_data and 'ancestor_data' in ancestor_data:
+                        normalized_ancestors = ancestor_data['ancestor_data']
+
+                    # Return consistent structure
+                    return {
+                        'id': taxon_id,
+                        'name': name,
+                        'rank': rank,
+                        'common_name': common_name,
+                        'ancestor_ids': ancestor_ids or [],
+                        'ancestors': normalized_ancestors
+                    }
+
+        except Exception as e:
+            print(f"Error getting cached branch for {taxon_id}: {e}")
         return None
 
-    def save_branch(self, taxon_id: int, taxon_data: Dict):
-        self.connect()
-        if not self.conn:
-            return
-
+    def save_branch(self, taxon_id: int, taxon_data: Dict) -> None:
+        """Save a taxon branch to the database only if it doesn't already exist."""
         try:
-            with self.conn:
-                with self.conn.cursor() as cur:
-                    cur.execute("""
+            with self.conn.cursor() as cur:
+                # Check if this taxon already exists
+                cur.execute("""
+                    SELECT taxon_id FROM taxa WHERE taxon_id = %s
+                """, (taxon_id,))
+                existing = cur.fetchone()
+
+                if existing:
+                    print(f"Taxon {taxon_id} already exists in cache")
+                    return
+
+                # Normalize ancestor data before saving.
+                # Assume your normalize_ancestors returns a list of dicts.
+                normalized_ancestors = normalize_ancestors(taxon_data.get('ancestors', []))
+
+                cur.execute("""
                     INSERT INTO taxa 
                     (taxon_id, name, rank, common_name, ancestor_ids, ancestor_data, last_updated)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (taxon_id) DO UPDATE
-                    SET name = EXCLUDED.name,
-                        rank = EXCLUDED.rank,
-                        common_name = EXCLUDED.common_name,
-                        ancestor_ids = EXCLUDED.ancestor_ids,
-                        ancestor_data = EXCLUDED.ancestor_data,
-                        last_updated = EXCLUDED.last_updated
-                    """, (
-                        taxon_id,
-                        taxon_data.get('name', ''),
-                        taxon_data.get('rank', ''),
-                        taxon_data.get('preferred_common_name', ''),
-                        taxon_data.get('ancestor_ids', []),
-                        Json(taxon_data),
-                        datetime.now(timezone.utc)
-                    ))
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                    ON CONFLICT (taxon_id) DO NOTHING
+                """, (
+                    taxon_id,
+                    taxon_data.get('name', ''),
+                    taxon_data.get('rank', ''),
+                    taxon_data.get('preferred_common_name', ''),
+                    taxon_data.get('ancestor_ids', []),
+                    Json({'ancestor_data': normalized_ancestors})
+                ))
+
+                if cur.rowcount > 0:
+                    print(f"Saved new taxon {taxon_id} to database")
+                else:
+                    print(f"Taxon {taxon_id} already exists in cache")
         except Exception as e:
-            print(f"Error saving branch: {e}")
-            if self.conn:
-                self.conn.rollback()
+            print(f"Error saving taxon {taxon_id}: {e}")

@@ -100,67 +100,112 @@ class TreeBuilder:
 
     @staticmethod
     def validate_tree(tree: Dict) -> bool:
-        """Validate that the tree is properly structured."""
+        """Validate the taxonomy tree structure."""
         required_fields = {'id', 'name', 'rank', 'children'}
 
         def validate_node(node: Dict) -> bool:
+            # Special case for root node which might not have all fields
+            if not node.get('id'):
+                return all(validate_node(child) for child in node.get('children', {}).values())
+
             # Check that all required fields are present
             if not all(field in node for field in required_fields):
                 print(f"Node missing required fields: {node.get('name', 'unknown')}")
                 return False
 
-            # Validate children recursively
-            for child in node['children'].values():
-                if not validate_node(child):
-                    return False
+            # Recursively validate children
+            return all(validate_node(child) for child in node.get('children', {}).values())
 
-            return True
-
-        valid = all(validate_node(node) for node in tree.values())
-        if not valid:
-            print("Tree validation failed")
-        return valid
+        return all(validate_node(node) for node in tree.values())
 
     @staticmethod
     def create_tree_structure(hierarchy: Dict) -> Tuple[Dict, Dict]:
         """Convert hierarchy to a format suitable for plotting."""
         print("\nSTART OF HIERARCHY DEBUGGING")
 
+        # Normalize the hierarchy into a proper node structure
+        if isinstance(hierarchy, dict):
+            if "id" in hierarchy and "children" in hierarchy:
+                root_node = hierarchy
+            else:
+                # Create a proper root node
+                root_node = {
+                    "id": 48460,  # Life
+                    "name": "Life",
+                    "rank": "stateofmatter",
+                    "common_name": "",
+                    "children": hierarchy
+                }
+        else:
+            print(f"Invalid hierarchy type: {type(hierarchy)}")
+            return {}, []
+
         def print_node(node, level=0):
             indent = "  " * level
-            name = node.get("name", "")
-            rank = node.get("rank", "")
-            print(f"{indent}Node - Name: {name}, Rank: {rank}")
-            for child in node["children"].values():
-                print_node(child, level + 1)
+            if isinstance(node, dict):
+                name = node.get("name", "")
+                rank = node.get("rank", "")
+                print(f"{indent}Node - Name: {name}, Rank: {rank}")
+                for child in node.get("children", {}).values():
+                    if isinstance(child, dict):
+                        print_node(child, level + 1)
+                    else:
+                        print(f"{indent}Invalid child type: {type(child)}")
+            else:
+                print(f"{indent}Invalid node type: {type(node)}")
 
         print("Full hierarchy structure:")
-        print_node({"children": hierarchy})
+        print_node(root_node)
 
         nodes = {}
         edges = []
         node_counter = 0
 
-        def traverse(node: Dict, parent_id: int = None) -> int:
+        def traverse(node: Dict, parent_id: Optional[int] = None) -> int:
+            """Traverse the tree and build nodes and edges."""
             nonlocal node_counter
             current_id = node_counter
             node_counter += 1
 
+            if not isinstance(node, dict):
+                print(f"Warning: Invalid node type in traverse: {type(node)}")
+                return current_id
+
+            # Create node entry
             nodes[current_id] = {
+                "id": node.get("id"),
                 "name": node.get("name", ""),
                 "common_name": node.get("common_name", ""),
-                "rank": node.get("rank", ""),
+                "rank": node.get("rank", "")
             }
 
+            # Add edge if this isn't the root
             if parent_id is not None:
                 edges.append((parent_id, current_id))
 
-            for child in node["children"].values():
-                traverse(child, current_id)
+            # Process children
+            children = node.get("children", {})
+            if isinstance(children, dict):
+                # Sort children by rank and name
+                sorted_children = sorted(
+                    children.items(),
+                    key=lambda x: (
+                        {"stateofmatter": 0, "kingdom": 1, "phylum": 2, "class": 3,
+                         "order": 4, "family": 5, "genus": 6, "species": 7}.get(
+                             x[1].get("rank", "") if isinstance(x[1], dict) else "", 999
+                         ),
+                        x[1].get("name", "") if isinstance(x[1], dict) else ""
+                    )
+                )
+
+                for _, child in sorted_children:
+                    if isinstance(child, dict):
+                        traverse(child, current_id)
 
             return current_id
 
-        traverse({"children": hierarchy, "name": "", "common_name": ""})
+        # Start traversal from root
+        traverse(root_node)
         return nodes, edges
 
     @staticmethod
@@ -205,6 +250,7 @@ class TreeBuilder:
             pos[node_id] = (x, sum(child_y_positions) / len(child_y_positions))
             return current_y
 
+        # Get leaf count and calculate positions
         leaf_count = get_leaf_count(0)
         vertical_spacing = 2 / (leaf_count + 1)
         calculate_positions(0, vertical_spacing=vertical_spacing)
@@ -212,11 +258,12 @@ class TreeBuilder:
         # Create figure
         fig = go.Figure()
 
-        # Add edges
+        # Add edges (branches)
         for parent, child in edges:
             px, py = pos[parent]
             cx, cy = pos[child]
 
+            # Create L-shaped branches
             path_x = [px, px, cx]
             path_y = [py, cy, cy]
 
@@ -229,41 +276,38 @@ class TreeBuilder:
                 showlegend=False
             ))
 
-        # Add nodes for higher taxonomic ranks
+        # Add nodes and labels
         for node_id, node_info in nodes.items():
-            if node_info.get("rank") != "species":
-                name = node_info.get("name", "")
-                rank = node_info.get("rank", "").title()
+            x, y = pos[node_id]
+            rank = node_info.get("rank", "")
+            name = node_info.get("name", "")
+            common_name = node_info.get("common_name", "")
 
-                hover_text = f"{rank}: {name}" if name else rank
+            # Create hover text
+            hover_text = f"{name}"
+            if common_name:
+                hover_text += f"<br>{common_name}"
+            if rank:
+                hover_text += f"<br>{rank.title()}"
 
-                fig.add_trace(go.Scatter(
-                    x=[pos[node_id][0]],
-                    y=[pos[node_id][1]],
-                    mode="markers",
-                    marker=dict(size=6, color="#2E7D32"),
-                    hoverinfo="text",
-                    text=hover_text,
-                    showlegend=False
-                ))
+            # Determine if this is a leaf node (species)
+            is_leaf = rank == "species"
 
-        # Add species nodes and labels
-        for node_id, node_info in nodes.items():
-            if node_info.get("rank") == "species":
-                label = f"{node_info['name']}"
-                if node_info["common_name"]:
-                    label += f"<br>{node_info['common_name']}"
-
-                fig.add_trace(go.Scatter(
-                    x=[pos[node_id][0]],
-                    y=[pos[node_id][1]],
-                    mode="markers+text",
-                    text=[label],
-                    textposition="middle right",
-                    hoverinfo="text",
-                    marker=dict(size=8, color="#2E7D32"),
-                    showlegend=False
-                ))
+            # Add node
+            fig.add_trace(go.Scatter(
+                x=[x],
+                y=[y],
+                mode="markers" + (" + text" if is_leaf else ""),
+                marker=dict(
+                    size=8 if is_leaf else 6,
+                    color="#2E7D32"
+                ),
+                text=[name] if is_leaf else None,
+                textposition="middle right" if is_leaf else None,
+                hoverinfo="text",
+                hovertext=hover_text,
+                showlegend=False
+            ))
 
         # Update layout
         fig.update_layout(
@@ -271,8 +315,19 @@ class TreeBuilder:
             plot_bgcolor="white",
             paper_bgcolor="white",
             margin=dict(l=50, r=50, t=30, b=30),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            xaxis=dict(
+                showgrid=False,
+                zeroline=False,
+                showticklabels=False,
+                range=[min(x for x, _ in pos.values()) - 0.5, max(x for x, _ in pos.values()) + 2]
+            ),
+            yaxis=dict(
+                showgrid=False,
+                zeroline=False,
+                showticklabels=False,
+                scaleanchor="x",
+                scaleratio=1
+            ),
             hovermode="closest",
             height=800,
             width=1200
