@@ -16,7 +16,7 @@ author = 29498440
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.address=0.0.0.0 --server.port=8502"
+args = "streamlit run app.py --server.address=0.0.0.0 --server.port=8502 --server.enableCORS=false --server.enableWebsocketCompression=false --server.headless=true"
 
 [[ports]]
 localPort = 5000

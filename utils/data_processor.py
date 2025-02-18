@@ -18,7 +18,7 @@ class DataProcessor:
         "Spiders": {"order": "Araneae", "id": 47118},
         "Fish": {"class": "Actinopterygii", "id": 47178}
     }
-    
+
     TAXONOMIC_RANKS = ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
     FULL_RANKS = ["stateofmatter"] + TAXONOMIC_RANKS
 
@@ -66,30 +66,29 @@ class DataProcessor:
                     skipped_count += 1
                     continue
 
-                # Ensure taxon and its ancestors are in DB
+                # Ensure the species (and recursively its ancestors) are in the DB.
                 species_id = obs["taxon"]["id"]
-                # Ensure the species and (recursively) its ancestors are in the database.
                 record = INaturalistAPI.ensure_taxon_in_db(species_id)
                 if not record:
                     print(f"Warning: Could not ensure taxon {species_id} in DB")
 
                 taxon = obs["taxon"]
 
-                # Normalize ancestor data immediately
+                # Normalize ancestor data immediately.
                 ancestors = normalize_ancestors(taxon.get("ancestors", {}))
 
-                # Extract and process ancestor IDs
+                # Extract and process ancestor IDs.
                 ancestor_ids = []
                 if taxon.get('ancestor_ids'):
                     if isinstance(taxon['ancestor_ids'], str):
                         try:
                             ancestor_ids = eval(taxon['ancestor_ids'])
-                        except:
-                            print(f"Could not parse ancestor_ids string: {taxon['ancestor_ids']}")
+                        except Exception as e:
+                            print(f"Could not parse ancestor_ids string: {taxon['ancestor_ids']} -- {e}")
                     else:
                         ancestor_ids = taxon['ancestor_ids']
 
-                # Print first observation's ancestor chain for debugging
+                # For debugging: Print the first observation's ancestor chain.
                 if len(processed_data) == 0:
                     print("\nFirst observation ancestors:")
                     print(f"Taxon: {taxon.get('name', 'Unknown')} (ID: {taxon.get('id')})")
@@ -102,22 +101,17 @@ class DataProcessor:
                         aid = ancestor.get('id', 'unknown')
                         print(f"  {rank}: {name} (ID: {aid})")
 
-                # Create mappings for both IDs and names
-                ancestor_names = {}
-                ancestor_ids_by_rank = {}
+                # Build mappings for both IDs and names.
+                ancestor_names = {"stateofmatter": "Life"}
+                ancestor_ids_by_rank = {"stateofmatter": 48460}
 
-                # Add Life as the root
-                ancestor_names["stateofmatter"] = "Life"
-                ancestor_ids_by_rank["stateofmatter"] = 48460
-
-                # Process ancestors and build complete taxonomy mapping
                 for ancestor in ancestors:
                     rank = ancestor.get('rank', '')
                     if rank:
                         ancestor_names[rank] = ancestor.get('name', '')
                         ancestor_ids_by_rank[rank] = ancestor.get('id')
 
-                # Fill in missing ranks from ancestor_ids if available
+                # Fill in missing ranks from ancestor_ids if available.
                 if ancestor_ids:
                     db = Database.get_instance()
                     for aid in ancestor_ids:
@@ -133,13 +127,11 @@ class DataProcessor:
                         except ValueError:
                             print(f"Invalid ancestor ID: {aid}")
 
-                # Check for missing standard ranks
                 std_ranks = {"kingdom", "phylum", "class", "order", "family", "genus"}
                 missing_ranks = std_ranks - set(ancestor_ids_by_rank.keys())
                 if missing_ranks and len(processed_data) == 0:
                     print(f"Warning: Missing taxonomic ranks: {missing_ranks}")
 
-                # Create observation data
                 processed_observation = {
                     "observation_id": obs["id"],
                     "taxon_id": taxon["id"],
@@ -148,11 +140,10 @@ class DataProcessor:
                     "common_name": taxon.get("preferred_common_name", ""),
                     "observed_on": obs.get("observed_on"),
                     "photo_url": obs.get("photos", [{}])[0].get("url", ""),
-                    "stateofmatter": 48460,  # Add Life
-                    "taxon_stateofmatter": "Life"  # Add Life name
+                    "stateofmatter": 48460,
+                    "taxon_stateofmatter": "Life"
                 }
 
-                # Add rank-specific fields
                 for rank in DataProcessor.TAXONOMIC_RANKS:
                     processed_observation[rank] = ancestor_ids_by_rank.get(rank)
                     processed_observation[f"taxon_{rank}"] = ancestor_names.get(rank, "")
@@ -185,28 +176,18 @@ class DataProcessor:
     def get_full_ancestor_chain(species_id: int) -> List[int]:
         """
         Returns a complete chain (from root to species) for the given species.
-        It recursively ensures that each taxon in the chain exists in the DB.
+        If the species record already has its ancestor_ids, we simply use them.
         """
         print(f"\nGetting ancestor chain for species {species_id}")
-        DataProcessor.debug_taxon_record(species_id)
         record = INaturalistAPI.ensure_taxon_in_db(species_id)
         if not record:
             print(f"No record found for taxon {species_id}")
             return []
-        print(f"Taxon {species_id} record: ancestor_ids = {record.get('ancestor_ids')}")
         chain = record.get("ancestor_ids", [])
         print(f"Initial chain for {species_id}: {chain}")
-        if chain and chain[0] == 48460:  # ROOT_ID
+        if chain and chain[0] == 48460:  # Skip duplicate root if present
             chain = chain[1:]
             print(f"Chain after skipping duplicate root: {chain}")
-        print(f"Ensuring all ancestors are in DB for {species_id}")
-        for aid in chain:
-            DataProcessor.debug_taxon_record(aid)
-            ancestor_record = INaturalistAPI.ensure_taxon_in_db(aid)
-            if ancestor_record:
-                print(f"  Ancestor {aid} record: ancestor_ids = {ancestor_record.get('ancestor_ids')}")
-            else:
-                print(f"  Warning: Could not ensure ancestor {aid}")
         final_chain = [48460] + chain + [species_id]
         print(f"Final chain for {species_id}: {final_chain}")
         return final_chain
@@ -462,9 +443,11 @@ class DataProcessor:
             return new_node
         return convert_node(tree)
 
+    # The debug_taxon_record method remains here (commented out) in case you need it in the future.
+    """
     @staticmethod
     def debug_taxon_record(taxon_id: int):
-        """Print debug information about a taxon's API and DB records."""
+        \"\"\"Print debug information about a taxon's API and DB records.\"\"\"
         print(f"\n=== Debug info for Taxon {taxon_id} ===")
         print("\nFetching from API...")
         api_record = INaturalistAPI.get_taxon_details(taxon_id)
@@ -495,3 +478,4 @@ class DataProcessor:
         else:
             print("  Cannot compare - missing records")
         print("=" * 50)
+    """
