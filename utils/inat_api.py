@@ -15,7 +15,8 @@ class INaturalistAPI:
         "Plants": 47126,  # Kingdom Plantae
         "Mammals": 40151,  # Class Mammalia
         "Reptiles": 26036,  # Class Reptilia
-        "Amphibians": 20978  # Class Amphibia
+        "Amphibians": 20978,  # Class Amphibia
+        "Mollusks": 47115 # Phylum Mollusca
     }
 
     @staticmethod
@@ -61,7 +62,20 @@ class INaturalistAPI:
         print(f"Username: {username}")
         print(f"Taxonomic group: {taxonomic_group}")
 
-        # Get observations from iNaturalist
+        # Get the appropriate root ID for the taxonomic group first
+        root_id = INaturalistAPI.taxon_params.get(taxonomic_group)
+        if not root_id:
+            print(f"ERROR: No root_id found for taxonomic group: {taxonomic_group}")
+            return None
+
+        # Check if we have a cached tree
+        taxonomy_cache = TaxonomyCache()
+        cached_tree = taxonomy_cache.get_cached_tree(root_id)
+        if cached_tree:
+            print(f"Found cached tree for {taxonomic_group}")
+            return cached_tree['tree']
+
+        # If no cache, fetch and process observations
         api = INaturalistAPI()
         observations = api.get_user_observations(username, taxonomic_group)
         print(f"\nFetched {len(observations)} observations")
@@ -118,12 +132,6 @@ class INaturalistAPI:
             print("ERROR: complete_tree is None after building!")
             return None
 
-        # Get the appropriate root ID for the taxonomic group
-        root_id = INaturalistAPI.taxon_params.get(taxonomic_group)
-        if not root_id:
-            print(f"ERROR: No root_id found for taxonomic group: {taxonomic_group}")
-            return None
-
         print(f"\nLooking for root node with ID: {root_id}")
         # Extract the subtree for our taxonomic group
         group_tree = builder.find_root_node(complete_tree, root_id)
@@ -144,10 +152,11 @@ class INaturalistAPI:
 
         # Save to cache
         print("\nSaving to taxonomy cache...")
-        taxonomy_cache = TaxonomyCache()
-        taxonomy_cache.save_tree(root_id=root_id,
-                                tree=group_tree,
-                                species_ids=species_ids)
+        taxonomy_cache.save_tree(
+            root_id=root_id,
+            tree=group_tree,
+            species_ids=species_ids
+        )
 
         print("=== Finished process_observations ===\n")
         return group_tree
@@ -167,6 +176,12 @@ class INaturalistAPI:
             root_taxon_id = self.taxon_params[taxonomic_group]
             print(f"Using taxonomic filter for {taxonomic_group} (ID: {root_taxon_id})")
 
+            # Check if we have a cached tree for this taxonomic group
+            cached_tree = taxonomy_cache.get_cached_tree(root_taxon_id)
+            if cached_tree:
+                print(f"Found cached tree for {taxonomic_group}")
+                return []  # Return empty list to skip API calls since we have cached data
+
         while True:
             try:
                 # Base parameters
@@ -176,7 +191,7 @@ class INaturalistAPI:
                     "page": page,
                     "order": "desc",
                     "order_by": "created_at",
-                    "include": ["taxon", "ancestors"]  # Include both in a single list
+                    "include": ["taxon", "ancestors"]
                 }
 
                 # Add taxonomic filter if specified
@@ -206,12 +221,17 @@ class INaturalistAPI:
                             ancestor_ids = taxon.get("ancestor_ids", [])
                             ancestors = []
 
-                            # Fetch and cache each ancestor's details
-                            for aid in ancestor_ids:
-                                ancestor = self.get_taxon_details(aid)
-                                if ancestor:
-                                    ancestors.append(ancestor)
-                                    time.sleep(0.5)  # Rate limiting
+                            # Check cache before fetching ancestors
+                            cached_ancestors = taxonomy_cache.get_ancestors(species_id)
+                            if cached_ancestors:
+                                ancestors = cached_ancestors
+                            else:
+                                # Fetch and cache each ancestor's details
+                                for aid in ancestor_ids:
+                                    ancestor = self.get_taxon_details(aid)
+                                    if ancestor:
+                                        ancestors.append(ancestor)
+                                        time.sleep(0.5)  # Rate limiting
 
                             # Save the species with complete information
                             db.save_branch(species_id, {
