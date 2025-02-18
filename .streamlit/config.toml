@@ -3,10 +3,11 @@
 address = "0.0.0.0"
 port = 8502
 headless = true
-enableCORS = true
+enableCORS = false
 enableXsrfProtection = false
 maxUploadSize = 200
 maxMessageSize = 200
+enableWebsocketCompression = false
 
 [browser]
 gatherUsageStats = false
@@ -27,6 +28,7 @@ magicEnabled = false
 [client]
 toolbarMode = "minimal"
 showErrorDetails = false
+caching = false
 
 [logger]
 level = "error"
