@@ -61,7 +61,7 @@ try:
 
         taxonomic_group = st.selectbox(
             "Select Taxonomic Group",
-            ["All Groups", "Insects", "Fungi", "Plants", "Mammals", "Reptiles", "Amphibians"]
+            ["All Groups", "Insects", "Fungi", "Plants", "Mammals", "Reptiles", "Amphibians", "Mollusks"]
         )
 
         run_button = st.button("Generate Tree")
