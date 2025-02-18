@@ -18,7 +18,10 @@ class INaturalistAPI:
         "Mammals": 40151,    # Class Mammalia
         "Reptiles": 26036,   # Class Reptilia
         "Amphibians": 20978, # Class Amphibia
-        "Mollusks": 47115    # Phylum Mollusca
+        "Mollusks": 47115,    # Phylum Mollusca
+        "Birds": 3,
+        "Spiders":47118,
+        "Fish": 47178
     }
 
     @staticmethod

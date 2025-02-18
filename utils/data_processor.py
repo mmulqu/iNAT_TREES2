@@ -13,9 +13,12 @@ class DataProcessor:
         "Mammals": {"class": "Mammalia", "id": 40151},
         "Reptiles": {"class": "Reptilia", "id": 26036},
         "Amphibians": {"class": "Amphibia", "id": 20978},
-        "Mollusks": {"phylum": "Mollusca", "id": 47115}
+        "Mollusks": {"phylum": "Mollusca", "id": 47115},
+        "Birds": {"class": "Aves", "id": 3},
+        "Spiders": {"order": "Araneae", "id": 47118},
+        "Fish": {"class": "Actinopterygii", "id": 47178}
     }
-
+    
     TAXONOMIC_RANKS = ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
     FULL_RANKS = ["stateofmatter"] + TAXONOMIC_RANKS
 
