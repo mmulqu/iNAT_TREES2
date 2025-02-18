@@ -92,7 +92,7 @@ try:
         username = st.text_input("iNaturalist Username")
         taxonomic_group = st.selectbox(
             "Select Taxonomic Group",
-            ["All Groups", "Insects", "Fungi", "Plants", "Mammals", "Reptiles", "Amphibians", "Mollusks"]
+            ["All Groups", "Insects", "Fungi", "Birds", "Spiders", "Fish", "Plants", "Mammals", "Reptiles", "Amphibians", "Mollusks"]
         )
         run_button = st.button("Generate Tree")
         st.markdown("""
