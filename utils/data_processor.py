@@ -188,57 +188,81 @@ class DataProcessor:
         if chain and chain[0] == 48460:  # Skip duplicate root if present
             chain = chain[1:]
             print(f"Chain after skipping duplicate root: {chain}")
-        final_chain = [48460] + chain + [species_id]
+
+        # Only append species_id if it's not already the last element in the chain
+        if chain and chain[-1] == species_id:
+            final_chain = [48460] + chain
+        else:
+            final_chain = [48460] + chain + [species_id]
+
         print(f"Final chain for {species_id}: {final_chain}")
         return final_chain
+
 
     @staticmethod
     def merge_branches_into_tree(species_ids: List[int]) -> Dict:
         """
         Given a list of species IDs, build (or update) the overall tree by merging each species' ancestor chain.
+        This version uses a global node map to ensure each taxon is added only once.
         """
         print("\nMerging branches into tree...")
+
+        # Initialize the root node ("Life") and the global node map.
         tree = {
-            "id": 48460,  # ROOT_ID for "Life"
+            "id": 48460,
             "name": "Life",
             "rank": "stateofmatter",
             "common_name": "Life",
             "children": {}
         }
+        node_map = {48460: tree}  # Global map: taxon_id -> node
+
         db = Database.get_instance()
 
         for species_id in species_ids:
             print(f"\nProcessing species {species_id}")
+            # Get the full ancestor chain for this species
             chain = DataProcessor.get_full_ancestor_chain(species_id)
-            # Remove duplicate root if present
-            if chain and chain[0] == tree["id"]:
-                chain = chain[1:]
             print(f"Got ancestor chain: {chain}")
             current_node = tree
-            for taxon_id in chain:
+
+            # Skip the first element (root 48460) to avoid linking the root to itself
+            for taxon_id in chain[1:]:
+                # If we've already created a node for this taxon, reuse it
+                if taxon_id in node_map:
+                    child_node = node_map[taxon_id]
+                else:
+                    # Otherwise, fetch the record from the database and create a new node
+                    record = db.get_cached_branch(taxon_id)
+                    if not record:
+                        print(f"Warning: Missing taxon record for {taxon_id}")
+                        continue  # Skip if record is missing
+
+                    child_node = {
+                        "id": record["id"],
+                        "name": record["name"],
+                        "rank": record["rank"],
+                        "common_name": record.get("common_name", ""),
+                        "children": {}
+                    }
+                    node_map[taxon_id] = child_node  # Store in our global map
+
+                # Link the child node to the current node if not already linked
                 key = str(taxon_id)
                 if key not in current_node["children"]:
-                    record = db.get_cached_branch(taxon_id)
-                    if record:
-                        print(f"[DEBUG] Found record for taxon {taxon_id}: {record}")
-                        current_node["children"][key] = {
-                            "id": record["id"],
-                            "name": record["name"],
-                            "rank": record["rank"],
-                            "common_name": record.get("common_name", ""),
-                            "children": {}
-                        }
-                        print(f"Added node {key} to tree: {current_node['children'][key]}")
-                    else:
-                        print(f"[DEBUG] No record found for taxon {taxon_id}")
-                        print(f"Warning: Missing taxon record for {taxon_id}")
-                        continue
+                    current_node["children"][key] = child_node
+                    print(f"Added node {key} to tree: {child_node}")
                 else:
                     print(f"Node {key} already exists in tree")
-                current_node = current_node["children"][key]
+
+                # Move current_node pointer to the child for the next iteration
+                current_node = child_node
+
         print(f"\nFinal tree structure:")
         print(f"Root children count: {len(tree['children'])}")
         return tree
+
+
 
 
     @staticmethod

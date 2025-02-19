@@ -11,7 +11,7 @@ class TreeBuilder:
 
         Args:
             taxa_data: List of dictionaries containing taxon information
-                      Each dict should have: taxon_id, name, rank, ancestor_ids
+                       Each dict should have: taxon_id, name, rank, ancestor_ids
         """
         print("\nStarting tree building...")
         # Initialize the complete tree
@@ -232,9 +232,19 @@ class TreeBuilder:
             return sum(get_leaf_count(child) for child in children)
 
         def calculate_positions(node_id, x=0, y_start=0, vertical_spacing=1):
+            """
+            Recursively assign (x, y) for each node.
+
+            :param node_id: the ID in the BFS index, not the taxon_id
+            :param x: current x-level
+            :param y_start: the y-value to start placing children
+            :param vertical_spacing: how far apart to place children
+            :return: the updated y after placing this node and its children
+            """
             children = G[node_id]
 
             if not children:
+                # Leaf node
                 pos[node_id] = (x, y_start)
                 return y_start + vertical_spacing
 
@@ -247,12 +257,18 @@ class TreeBuilder:
                 child_y_positions.append(pos[child][1])
                 current_y = next_y
 
+            # Position the parent in the middle of its children
             pos[node_id] = (x, sum(child_y_positions) / len(child_y_positions))
             return current_y
 
-        # Get leaf count and calculate positions
+        # 1) Count total leaves
         leaf_count = get_leaf_count(0)
-        vertical_spacing = 2 / (leaf_count + 1)
+
+        # 2) Multiply the base spacing by a bigger factor to get more vertical space
+        #    For example, we used 2.0 in your code; let's double it to 4.0
+        vertical_spacing = 4.0 / (leaf_count + 1)
+
+        # 3) Run the position calculation
         calculate_positions(0, vertical_spacing=vertical_spacing)
 
         # Create figure
@@ -291,13 +307,13 @@ class TreeBuilder:
                 hover_text += f"<br>{rank.title()}"
 
             # Determine if this is a leaf node (species)
-            is_leaf = rank == "species"
+            is_leaf = (rank == "species")
 
             # Add node
             fig.add_trace(go.Scatter(
                 x=[x],
                 y=[y],
-                mode="markers" + (" + text" if is_leaf else ""),
+                mode="markers" + ("+text" if is_leaf else ""),
                 marker=dict(
                     size=8 if is_leaf else 6,
                     color="#2E7D32"
@@ -319,14 +335,18 @@ class TreeBuilder:
                 showgrid=False,
                 zeroline=False,
                 showticklabels=False,
-                range=[min(x for x, _ in pos.values()) - 0.5, max(x for x, _ in pos.values()) + 2]
+                range=[
+                    min(x for x, _ in pos.values()) - 0.5,
+                    max(x for x, _ in pos.values()) + 2
+                ]
             ),
+            # Removing scaleanchor so y can stretch more
             yaxis=dict(
                 showgrid=False,
                 zeroline=False,
-                showticklabels=False,
-                scaleanchor="x",
-                scaleratio=1
+                showticklabels=False
+                # scaleanchor="x",    # <- remove or comment out
+                # scaleratio=1
             ),
             hovermode="closest",
             height=800,
