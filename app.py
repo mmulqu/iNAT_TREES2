@@ -55,14 +55,15 @@ try:
         st.session_state.last_taxonomic_group = ""
 
     # Check for OAuth callback
-    if "code" in st.query_params:
-        code = st.query_params["code"]
-        token_data = INaturalistAuth.exchange_code_for_token(code)
+    current_path = st.experimental_get_query_params().get("code", [None])[0]
+    if current_path:
+        auth = INaturalistAuth()
+        token_data = auth.exchange_code_for_token(current_path)
         if token_data:
             INaturalistAuth.store_token(token_data)
-            # Clear the URL parameters
-            st.query_params.clear()
             st.success("Successfully authenticated with iNaturalist!")
+            st.experimental_set_query_params()  # Clear URL parameters
+            st.rerun()
         else:
             st.error("Failed to authenticate with iNaturalist. Please try again.")
 
