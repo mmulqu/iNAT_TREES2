@@ -15,12 +15,8 @@ class INaturalistAuth:
         """Generate the authorization URL for iNaturalist OAuth2."""
         client_id = os.environ["INATURALIST_APP_ID"]
         
-        # Get the full deployment URL from Streamlit
-        base_url = st.get_option("server.baseUrlPath")
-        if base_url.startswith('/'):
-            # We're in a deployment environment
-            base_url = f"https://{os.environ.get('REPL_SLUG')}-00-{os.environ.get('REPL_ID')}.picard.repl.dev"
-        
+        # Hardcoded deployment URL
+        base_url = "https://89db0771-3709-40e3-8c8f-aa81528cb2fd-00-2qpm1txg3h6nn.picard.replit.dev"
         redirect_uri = f"{base_url}/callback"
         logger.info(f"Generated redirect URI: {redirect_uri}")
 
