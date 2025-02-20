@@ -1,0 +1,86 @@
+Authentication
+iNaturalist is an OAuth2 provider and supports the Authorization Code, Resource Owner Password Credentials, and Proof Key for Code Exchange (PKCE) flows, as well as some custom auth flows for 3rd party authentication. Methods marked Auth required require authentication via one of the aforementioned methods. Please make sure to use https://www.inaturalist.org as the base URL for authorization flows and for authenticated requests to ensure passwords and access tokens are encrypted. Unfortunately we must maintain the vanilla http endpoints for backward compatability, but all future API users should make requests with SSL. Note that many PUT and DELETE methods also check for ownership and will fail if you try to use them when not authenticated as the user who owns the associated resources.
+
+Auth Examples
+Before you make any authenticated requests, you'll need to create an iNat application. The redirect_uri should be functioning URL to which users will be redirected upon successfully authorizing your app with access to the user's iNat data.
+
+There are plenty of language-specific OAuth2 libraries out there, so find one you like or get familiar enough with OAuth2 to construct requests and manage redirect flows yourself. The following examples use Ruby's oauth2 gem.
+
+
+Authorization Code Flow
+This is what you'll want to use if your app is a web app, and/or you're sure you're users can open a web browser for auth *and* you can store your client secret in a secure fashion. The rough outline is you redirect your user to iNat, the user is offered the choice to authorize your app with access to their iNat data, and if they agree, they are redirected to the redirect_uri you specified with an access_token in the params.
+
+require 'rubygems'
+require 'rest_client'
+require 'json'
+ 
+site = "https://www.inaturalist.org"
+app_id = 'YOUR APP ID'
+app_secret = 'YOUR APP SECRET'
+redirect_uri = 'YOUR APP REDIRECT URI' # you can set this to some URL you control for testing
+ 
+# REQUEST AN AUTHORIZATION CODE
+# Your web app should redirect the user to this url. They should see a screen
+# offering them the choice to authorize your app. If they aggree, they will be
+# redirected to your redirect_uri with a "code" parameter
+url = "#{site}/oauth/authorize?client_id=#{app_id}&redirect_uri=#{redirect_uri}&response_type=code"
+ 
+# REQUEST AN AUTH TOKEN
+# Once your app has that code parameter, you can exchange it for an access token:
+puts "Go to #{url}, approve the app, and you should be redirected to your " + 
+  "redirect_uri. Copy and paste the 'code' param here."
+print "Code: "
+auth_code = gets.strip
+puts
+
+payload = {
+  :client_id => app_id,
+  :client_secret => app_secret,
+  :code => auth_code,
+  :redirect_uri => redirect_uri,
+  :grant_type => "authorization_code"
+}
+puts "POST #{site}/oauth/token, payload: #{payload.inspect}"
+puts response = RestClient.post("#{site}/oauth/token", payload)
+puts
+# response will be a chunk of JSON looking like
+# {
+#   "access_token":"xxx",
+#   "token_type":"bearer",
+#   "expires_in":null,
+#   "refresh_token":null,
+#   "scope":"write"
+# }
+ 
+# Store the token (access_token) in your web app. You can now use it to make authorized
+# requests on behalf of the user, like retrieving profile data:
+token = JSON.parse(response)["access_token"]
+headers = {"Authorization" => "Bearer #{token}"}
+puts "GET /users/edit.json, headers: #{headers.inspect}"
+puts RestClient.get("#{site}/users/edit.json", headers)
+puts
+view rawinaturalist-oauth-authorization_code_flow.rb hosted with ❤ by GitHub
+
+Proof Key for Code Exchange Flow
+This is a variation on the Authorization Code Flow for use in situations where you cannot store your client secret securely, e.g. in a client-side Javascript application or a mobile application that could be decompiled. Instead of providing a secret to identify itself, the client provides a hashed, single-use "code verifier" when requesting an authorization code. When the client requests an access token it must provide the unhashed code verifier to verify that it is the same client that requested the authorization code. More details at the IETF, but the Doorkeeper docs might be easier to read.
+
+require "rubygems"
+require "rest_client"
+require "digest"
+require "base64"
+
+site = "https://www.inaturalist.org"
+app_id = 'YOUR_APP_ID'
+redirect_uri = 'YOUR_REDIRECT_URL' # you can set this to some URL you control for testing
+code_verifier = "supersecretverifier"
+
+# Encode your code_verifier
+# For notes on the modified Base64 encoding, see https://tools.ietf.org/html/rfc7636#appendix-A
+# Note that Ruby's Base64#urlsafe_encode64 does *not* seem to work
+code_challenge = Base64.encode64(Digest::SHA256.digest(code_verifier))
+code_challenge = code_challenge.split("=")[0]
+code_challenge.gsub!("+", "-")
+code_challenge.gsub!("/", "_")
+ 
+# REQUEST AN AUTHORIZATION CODE
+# Your web app should redirect the user to this url. They should se...
