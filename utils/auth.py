@@ -10,46 +10,36 @@ logger = logging.getLogger(__name__)
 class INaturalistAuth:
     BASE_URL = "https://www.inaturalist.org"
 
-    @staticmethod
-    def get_authorization_url() -> str:
-        """Generate the authorization URL for iNaturalist OAuth2."""
-        client_id = os.environ["INATURALIST_APP_ID"]
-        
-        # Hardcoded deployment URL
-        base_url = "https://89db0771-3709-40e3-8c8f-aa81528cb2fd-00-2qpm1txg3h6nn.picard.replit.dev"
-        redirect_uri = f"{base_url}/callback"
-        logger.info(f"Generated redirect URI: {redirect_uri}")
+    def __init__(self):
+        self.client_id = os.environ["INATURALIST_APP_ID"]
+        self.client_secret = os.environ["INATURALIST_APP_SECRET"]
+        self.base_url = "https://89db0771-3709-40e3-8c8f-aa81528cb2fd-00-2qpm1txg3h6nn.picard.replit.dev"
+        self.redirect_uri = f"{self.base_url}/callback"
 
+    def get_authorization_url(self) -> str:
+        """Generate the authorization URL for iNaturalist OAuth."""
         params = {
-            "client_id": client_id,
-            "redirect_uri": redirect_uri,
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
             "response_type": "code"
         }
-
-        auth_url = f"{INaturalistAuth.BASE_URL}/oauth/authorize?{urlencode(params)}"
+        auth_url = f"{self.BASE_URL}/oauth/authorize?{urlencode(params)}"
         logger.info(f"Generated authorization URL: {auth_url}")
         return auth_url
 
-    @staticmethod
-    def exchange_code_for_token(code: str) -> dict:
+    def exchange_code_for_token(self, code: str) -> dict:
         """Exchange the authorization code for an access token."""
         try:
-            base_url = st.get_option('server.baseUrlPath')
-            base_url = base_url.rstrip('/')
-            redirect_uri = f"{base_url}/callback"
-
-            logger.info(f"Exchange token redirect URI: {redirect_uri}")
-
             payload = {
-                "client_id": os.environ["INATURALIST_APP_ID"],
-                "client_secret": os.environ["INATURALIST_APP_SECRET"],
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
                 "code": code,
-                "redirect_uri": redirect_uri,
+                "redirect_uri": self.redirect_uri,
                 "grant_type": "authorization_code"
             }
 
             response = requests.post(
-                f"{INaturalistAuth.BASE_URL}/oauth/token",
+                f"{self.BASE_URL}/oauth/token",
                 data=payload
             )
 
@@ -64,9 +54,17 @@ class INaturalistAuth:
             return None
 
     @staticmethod
+    def init_auth_state():
+        """Initialize authentication state in session."""
+        if "authenticated" not in st.session_state:
+            st.session_state.authenticated = False
+        if "access_token" not in st.session_state:
+            st.session_state.access_token = None
+
+    @staticmethod
     def is_authenticated() -> bool:
         """Check if the user is authenticated."""
-        return "access_token" in st.session_state
+        return st.session_state.get("authenticated", False)
 
     @staticmethod
     def get_access_token() -> str:
@@ -76,10 +74,18 @@ class INaturalistAuth:
     @staticmethod
     def store_token(token_data: dict) -> None:
         """Store the token data in session state."""
-        st.session_state["access_token"] = token_data.get("access_token")
+        st.session_state.access_token = token_data.get("access_token")
+        st.session_state.authenticated = True
 
     @staticmethod
     def logout() -> None:
         """Clear the stored authentication data."""
+        st.session_state.authenticated = False
         if "access_token" in st.session_state:
-            del st.session_state["access_token"]
+            del st.session_state.access_token
+
+def get_auth_headers():
+    """Get authentication headers if token is available."""
+    if st.session_state.get('access_token'):
+        return {"Authorization": f"Bearer {st.session_state.access_token}"}
+    return {}
