@@ -13,10 +13,7 @@ class INaturalistAuth:
     def __init__(self):
         self.client_id = os.environ["INATURALIST_APP_ID"]
         self.client_secret = os.environ["INATURALIST_APP_SECRET"]
-        # Use deployed URL for production, dev URL for development
-        is_production = os.getenv("DEPLOYED_URL") == "https://inat-taxa-trees.replit.app"
-        self.base_url = "https://inat-taxa-trees.replit.app" if is_production else "https://89db0771-3709-40e3-8c8f-aa81528cb2fd-00-2qpm1txg3h6nn.picard.replit.dev"
-        self.redirect_uri = f"{self.base_url}/callback"
+        self.redirect_uri = "https://inat-taxa-trees.replit.app/callback"
 
     @staticmethod
     def get_authorization_url() -> str:
