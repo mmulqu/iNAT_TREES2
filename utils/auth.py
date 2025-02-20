@@ -1,21 +1,20 @@
+
 import os
 import requests
-from typing import Optional, Dict, Any
 import streamlit as st
 import logging
+from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
 class INaturalistAuth:
-    INATURALIST_BASE_URL = "https://www.inaturalist.org"
+    BASE_URL = "https://www.inaturalist.org"
 
     @staticmethod
     def get_authorization_url() -> str:
         """Generate the authorization URL for iNaturalist OAuth2."""
         client_id = os.environ["INATURALIST_APP_ID"]
-        # Use the full URL including protocol and hostname
         base_url = st.get_option('server.baseUrlPath')
-        # Remove any trailing slash
         base_url = base_url.rstrip('/')
         redirect_uri = f"{base_url}/callback"
 
@@ -27,14 +26,12 @@ class INaturalistAuth:
             "response_type": "code"
         }
 
-        # Construct query string
-        query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-        auth_url = f"{INaturalistAuth.INATURALIST_BASE_URL}/oauth/authorize?{query_string}"
+        auth_url = f"{INaturalistAuth.BASE_URL}/oauth/authorize?{urlencode(params)}"
         logger.info(f"Generated authorization URL: {auth_url}")
         return auth_url
 
     @staticmethod
-    def exchange_code_for_token(code: str) -> Optional[Dict[str, Any]]:
+    def exchange_code_for_token(code: str) -> dict:
         """Exchange the authorization code for an access token."""
         try:
             base_url = st.get_option('server.baseUrlPath')
@@ -52,7 +49,7 @@ class INaturalistAuth:
             }
 
             response = requests.post(
-                f"{INaturalistAuth.INATURALIST_BASE_URL}/oauth/token",
+                f"{INaturalistAuth.BASE_URL}/oauth/token",
                 data=payload
             )
 
@@ -72,12 +69,12 @@ class INaturalistAuth:
         return "access_token" in st.session_state
 
     @staticmethod
-    def get_access_token() -> Optional[str]:
+    def get_access_token() -> str:
         """Get the stored access token."""
         return st.session_state.get("access_token")
 
     @staticmethod
-    def store_token(token_data: Dict[str, Any]) -> None:
+    def store_token(token_data: dict) -> None:
         """Store the token data in session state."""
         st.session_state["access_token"] = token_data.get("access_token")
 
