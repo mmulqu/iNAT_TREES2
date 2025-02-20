@@ -2,6 +2,9 @@ import os
 import requests
 from typing import Optional, Dict, Any
 import streamlit as st
+import logging
+
+logger = logging.getLogger(__name__)
 
 class INaturalistAuth:
     INATURALIST_BASE_URL = "https://www.inaturalist.org"
@@ -16,6 +19,8 @@ class INaturalistAuth:
         base_url = base_url.rstrip('/')
         redirect_uri = f"{base_url}/callback"
 
+        logger.info(f"Generated redirect URI: {redirect_uri}")
+
         params = {
             "client_id": client_id,
             "redirect_uri": redirect_uri,
@@ -24,7 +29,9 @@ class INaturalistAuth:
 
         # Construct query string
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-        return f"{INaturalistAuth.INATURALIST_BASE_URL}/oauth/authorize?{query_string}"
+        auth_url = f"{INaturalistAuth.INATURALIST_BASE_URL}/oauth/authorize?{query_string}"
+        logger.info(f"Generated authorization URL: {auth_url}")
+        return auth_url
 
     @staticmethod
     def exchange_code_for_token(code: str) -> Optional[Dict[str, Any]]:
@@ -33,6 +40,8 @@ class INaturalistAuth:
             base_url = st.get_option('server.baseUrlPath')
             base_url = base_url.rstrip('/')
             redirect_uri = f"{base_url}/callback"
+
+            logger.info(f"Exchange token redirect URI: {redirect_uri}")
 
             payload = {
                 "client_id": os.environ["INATURALIST_APP_ID"],
@@ -49,9 +58,11 @@ class INaturalistAuth:
 
             if response.status_code == 200:
                 return response.json()
+            logger.error(f"Token exchange failed with status {response.status_code}: {response.text}")
             return None
 
         except Exception as e:
+            logger.error(f"Error exchanging code for token: {str(e)}")
             st.error(f"Error exchanging code for token: {str(e)}")
             return None
 
