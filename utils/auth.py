@@ -13,7 +13,9 @@ class INaturalistAuth:
     def __init__(self):
         self.client_id = os.environ["INATURALIST_APP_ID"]
         self.client_secret = os.environ["INATURALIST_APP_SECRET"]
-        self.redirect_uri = os.getenv("INATURALIST_REDIRECT_URI")  # This should be the root URL of your app
+        # Use deployed URL if available, otherwise use dev URL
+        self.base_url = os.getenv("DEPLOYED_URL", "https://89db0771-3709-40e3-8c8f-aa81528cb2fd-00-2qpm1txg3h6nn.picard.replit.dev")
+        self.redirect_uri = f"{self.base_url}/callback"
 
     @staticmethod
     def get_authorization_url() -> str:
