@@ -16,11 +16,13 @@ class INaturalistAuth:
         self.base_url = "https://89db0771-3709-40e3-8c8f-aa81528cb2fd-00-2qpm1txg3h6nn.picard.replit.dev"
         self.redirect_uri = f"{self.base_url}/callback"
 
-    def get_authorization_url(self) -> str:
+    @staticmethod
+    def get_authorization_url() -> str:
         """Generate the authorization URL for iNaturalist OAuth."""
+        auth = INaturalistAuth()
         params = {
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
+            "client_id": auth.client_id,
+            "redirect_uri": auth.redirect_uri,
             "response_type": "code"
         }
         auth_url = f"{self.BASE_URL}/oauth/authorize?{urlencode(params)}"
