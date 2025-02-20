@@ -14,11 +14,10 @@ class INaturalistAuth:
     def get_authorization_url() -> str:
         """Generate the authorization URL for iNaturalist OAuth2."""
         client_id = os.environ["INATURALIST_APP_ID"]
-        # Get the full URL from Streamlit's runtime config
-        base_url = st.get_option('server.baseUrlPath')
-        if base_url.startswith('/'):
-            # We need the full domain
-            base_url = f"https://{os.environ.get('REPL_SLUG')}.{os.environ.get('REPL_OWNER')}.repl.co"
+        # Construct the full domain URL
+        repl_id = os.environ.get("REPL_ID", "")
+        repl_owner = os.environ.get("REPL_OWNER", "")
+        base_url = f"https://{repl_id}.id.repl.co"
         redirect_uri = f"{base_url}/callback"
 
         logger.info(f"Generated redirect URI: {redirect_uri}")
