@@ -55,19 +55,17 @@ try:
         st.session_state.last_taxonomic_group = ""
 
     # Handle OAuth callback
-    if "callback" in st.runtime.scriptrunner.script_path:
-        code = st.query_params.get("code", None)
-        if code:
-            auth = INaturalistAuth()
-            token_data = auth.exchange_code_for_token(code)
-            if token_data:
-                INaturalistAuth.store_token(token_data)
-                st.success("Successfully authenticated with iNaturalist!")
-                st.query_params.clear()
-                st.switch_page("app.py")
-            else:
-                st.error("Failed to authenticate with iNaturalist. Please try again.")
-        return
+    code = st.query_params.get("code", None)
+    if code:
+        auth = INaturalistAuth()
+        token_data = auth.exchange_code_for_token(code)
+        if token_data:
+            INaturalistAuth.store_token(token_data)
+            st.success("Successfully authenticated with iNaturalist!")
+            st.query_params.clear()
+            st.rerun()
+        else:
+            st.error("Failed to authenticate with iNaturalist. Please try again.")
 
     # Header
     st.markdown('<h1 class="main-header">iNaturalist Phylogenetic Tree Viewer 🌳</h1>', unsafe_allow_html=True)
