@@ -12,11 +12,31 @@ runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
-author = 29498440
+author = "agent"
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "streamlit run app.py --server.address=0.0.0.0 --server.port=8502 --server.enableCORS=false --server.enableWebsocketCompression=false --server.headless=true"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Streamlit Server"
+
+[[workflows.workflow]]
+name = "Streamlit Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
