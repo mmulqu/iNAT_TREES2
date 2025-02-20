@@ -25,7 +25,7 @@ class INaturalistAuth:
             "redirect_uri": auth.redirect_uri,
             "response_type": "code"
         }
-        auth_url = f"{self.BASE_URL}/oauth/authorize?{urlencode(params)}"
+        auth_url = f"{INaturalistAuth.BASE_URL}/oauth/authorize?{urlencode(params)}"
         logger.info(f"Generated authorization URL: {auth_url}")
         return auth_url
 
