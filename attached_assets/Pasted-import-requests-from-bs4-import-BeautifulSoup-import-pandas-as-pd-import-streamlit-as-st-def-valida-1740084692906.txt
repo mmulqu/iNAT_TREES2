@@ -1,0 +1,88 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import streamlit as st
+
+def validate_username(username):
+    """Check if the username exists on iNaturalist."""
+    try:
+        response = requests.get(f"https://www.inaturalist.org/people/{username}")
+        return response.status_code == 200
+    except:
+        return False
+
+def get_auth_headers():
+    """Get authentication headers if token is available."""
+    if st.session_state.get('access_token'):
+        return {"Authorization": f"Bearer {st.session_state.access_token}"}
+    return {}
+
+def fetch_observation_stats(username):
+    """Fetch basic observation statistics for a user."""
+    try:
+        # First get user ID from username
+        headers = get_auth_headers()
+        user_response = requests.get(
+            f"https://api.inaturalist.org/v1/users/{username}",
+            headers=headers
+        )
+        if user_response.status_code != 200:
+            return None
+
+        user_data = user_response.json()
+        if not user_data.get('results') or not user_data['results']:
+            return None
+
+        user_id = user_data['results'][0]['id']
+
+        # Then get the stats using the user ID
+        stats_response = requests.get(
+            f"https://api.inaturalist.org/v1/observations/observers?user_id={user_id}",
+            headers=headers
+        )
+        if stats_response.status_code != 200:
+            return None
+
+        stats_data = stats_response.json()
+        if not stats_data.get('results') or not stats_data['results']:
+            return None
+
+        # Get identifications count
+        ident_response = requests.get(
+            f"https://api.inaturalist.org/v1/identifications?user_id={user_id}&per_page=0",
+            headers=headers
+        )
+        ident_data = ident_response.json() if ident_response.status_code == 200 else None
+
+        result = stats_data['results'][0]
+        result['identifications_count'] = ident_data.get('total_results', 0) if ident_data else 0
+
+        return result
+    except Exception as e:
+        print(f"Error fetching stats: {str(e)}")
+        return None
+
+def get_casual_observations(username):
+    """Get casual grade observations for a user."""
+    url = f"https://www.inaturalist.org/observations/identify?reviewed=any&quality_grade=casual&user_id={username}"
+    return url
+
+def get_flagged_content(username):
+    """Get flagged content for a user."""
+    url = f"https://www.inaturalist.org/flags?utf8=%E2%9C%93&flagger_type=user&flagger_name={username}&flagger_user_id={username}&user_name=&user_id=&flaggable_type=all&deleted=any&flags%5B%5D=inappropriate&flags%5B%5D=other&reason_query=&resolved=no&resolver_name=&resolver_user_id=&commit=Filter&content_author={username}"
+    return url
+
+def get_maverick_ids(username):
+    """Get maverick IDs for a user."""
+    url = f"https://www.inaturalist.org/identifications?user_id={username}&category=maverick"
+    return url
+
+def get_spam_flags(username):
+    """Get potential spam flags for a user."""
+    url = f"https://www.inaturalist.org/observations/identify?reviewed=any&quality_grade=needs_id%2Cresearch%2Ccasual&spam=true&user_id={username}"
+    return url
+
+def get_pre_maverick(username):
+    """Get pre-maverick observations for a user."""
+    url = f"https://www.inaturalist.org/observations/identify?reviewed=any&quality_grade=needs_id%2Cresearch&user_id={username}&project_id=156949"
+    return url

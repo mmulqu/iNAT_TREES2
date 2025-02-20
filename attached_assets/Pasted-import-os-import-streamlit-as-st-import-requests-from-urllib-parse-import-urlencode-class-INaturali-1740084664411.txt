@@ -1,0 +1,72 @@
+import os
+import streamlit as st
+import requests
+from urllib.parse import urlencode
+
+class INaturalistAuth:
+    def __init__(self):
+        self.base_url = "https://www.inaturalist.org"
+        self.client_id = os.getenv("INATURALIST_CLIENT_ID")
+        self.client_secret = os.getenv("INATURALIST_CLIENT_SECRET")
+        self.redirect_uri = os.getenv("INATURALIST_REDIRECT_URI")  # This should be the root URL of your app
+
+    def get_auth_url(self):
+        """Generate the authorization URL for iNaturalist OAuth."""
+        params = {
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
+            "response_type": "code"
+        }
+        return f"{self.base_url}/oauth/authorize?{urlencode(params)}"
+
+    def exchange_code_for_token(self, code):
+        """Exchange authorization code for access token."""
+        payload = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "code": code,
+            "redirect_uri": self.redirect_uri,
+            "grant_type": "authorization_code"
+        }
+
+        response = requests.post(f"{self.base_url}/oauth/token", data=payload)
+        if response.status_code == 200:
+            token_data = response.json()
+            return token_data.get("access_token")
+        return None
+
+def init_auth_state():
+    """Initialize authentication state in session."""
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    if "access_token" not in st.session_state:
+        st.session_state.access_token = None
+
+def handle_auth():
+    """Handle the authentication flow."""
+    init_auth_state()
+    auth = INaturalistAuth()
+
+    if not st.session_state.authenticated:
+        # Check for auth code in URL params
+        code = st.query_params.get("code")
+        if code:
+            access_token = auth.exchange_code_for_token(code)
+            if access_token:
+                st.session_state.access_token = access_token
+                st.session_state.authenticated = True
+                # Clear the URL parameters
+                st.query_params.clear()
+                st.rerun()
+                return True
+
+        # Show login button
+        st.markdown("""
+        ### iNaturalist Authentication
+        To access your iNaturalist data, please authorize this application:
+        """)
+        auth_url = auth.get_auth_url()
+        st.markdown(f"[Login with iNaturalist]({auth_url})")
+        return False
+
+    return True
