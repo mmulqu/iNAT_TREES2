@@ -134,8 +134,15 @@ try:
                         "Loading observations... If only data traveled as fast as invasive species."
                     ]
                     with st.spinner(spinner_messages[0]):
+                        logger.info(f"Starting API request for user {st.session_state.username} with taxonomic group {taxonomic_group}")
                         api = INaturalistAPI()
-                        st.session_state.observations = api.get_user_observations(st.session_state.username, None if taxonomic_group == "All Groups" else taxonomic_group)
+                        try:
+                            st.session_state.observations = api.get_user_observations(st.session_state.username, None if taxonomic_group == "All Groups" else taxonomic_group)
+                            logger.info(f"API request completed. Got {len(st.session_state.observations) if st.session_state.observations else 0} observations")
+                        except Exception as e:
+                            logger.error(f"API request failed: {str(e)}", exc_info=True)
+                            st.error(f"Failed to fetch observations: {str(e)}")
+                            st.stop()
 
                 observations = st.session_state.observations
                 logger.info(f"Retrieved {len(observations) if observations else 0} observations")
