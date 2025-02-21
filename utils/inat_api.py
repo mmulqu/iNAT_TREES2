@@ -247,7 +247,6 @@ class INaturalistAPI:
                 if root_taxon_id:
                     params["taxon_id"] = root_taxon_id
                 print(f"Making API request with params: {params}")
-                logger.info(f"Making iNaturalist API request: GET /observations with params={params}")
                 response = requests.get(
                     f"{self.BASE_URL}/observations",
                     params=params,
