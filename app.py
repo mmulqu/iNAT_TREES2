@@ -61,7 +61,16 @@ try:
         token_data = auth.exchange_code_for_token(code)
         if token_data:
             INaturalistAuth.store_token(token_data)
-            st.success("Successfully authenticated with iNaturalist!")
+            # Get username from iNaturalist
+            auth = INaturalistAuth()
+            me_response = requests.get(
+                "https://api.inaturalist.org/v1/users/me",
+                headers={"Authorization": f"Bearer {token_data['access_token']}"}
+            )
+            if me_response.status_code == 200:
+                username = me_response.json()['results'][0]['login']
+                st.session_state.username = username
+                st.success(f"Successfully authenticated as {username}!")
             st.query_params.clear()
             st.rerun()
         else:
@@ -99,7 +108,10 @@ try:
         # Main content
         if run_button:
             try:
-                logger.info(f"Processing request for authenticated user, group: {taxonomic_group}")
+                if 'username' not in st.session_state:
+                    st.error("Please log in first")
+                    return
+                logger.info(f"Processing request for user {st.session_state.username}, group: {taxonomic_group}")
 
                 # Check if the group has changed from the previous request
                 if st.session_state.last_taxonomic_group != taxonomic_group:
@@ -117,8 +129,8 @@ try:
                         "Loading observations... If only data traveled as fast as invasive species."
                     ]
                     with st.spinner(spinner_messages[0]):
-                        api = INaturalistAPI(INaturalistAuth.get_access_token())
-                        st.session_state.observations = api.get_user_observations(None if taxonomic_group == "All Groups" else taxonomic_group)
+                        api = INaturalistAPI()
+                        st.session_state.observations = api.get_user_observations(st.session_state.username, None if taxonomic_group == "All Groups" else taxonomic_group)
 
                 observations = st.session_state.observations
                 logger.info(f"Retrieved {len(observations) if observations else 0} observations")
