@@ -2,6 +2,7 @@ import sys
 import logging
 import os
 import time
+import requests
 from urllib.parse import urlparse, parse_qs
 
 # Configure logging first
