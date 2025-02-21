@@ -134,8 +134,12 @@ try:
                         "Loading observations... If only data traveled as fast as invasive species."
                     ]
                     with st.spinner(spinner_messages[0]):
+                        logger.info(f"Calling API with username: {st.session_state.username}")
                         api = INaturalistAPI()
-                        st.session_state.observations = api.get_user_observations(st.session_state.username, None if taxonomic_group == "All Groups" else taxonomic_group)
+                        st.session_state.observations = api.get_user_observations(
+                            username=st.session_state.username,
+                            taxonomic_group=None if taxonomic_group == "All Groups" else taxonomic_group
+                        )
 
                 observations = st.session_state.observations
                 logger.info(f"Retrieved {len(observations) if observations else 0} observations")
