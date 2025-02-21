@@ -63,7 +63,6 @@ try:
         if token_data:
             INaturalistAuth.store_token(token_data)
             # Get username from iNaturalist
-            auth = INaturalistAuth()
             me_response = requests.get(
                 "https://api.inaturalist.org/v1/users/me",
                 headers={"Authorization": f"Bearer {token_data['access_token']}"}
@@ -71,6 +70,7 @@ try:
             if me_response.status_code == 200:
                 username = me_response.json()['results'][0]['login']
                 st.session_state.username = username
+                st.session_state.authenticated = True
                 st.success(f"Successfully authenticated as {username}!")
             st.query_params.clear()
             st.rerun()
@@ -109,7 +109,7 @@ try:
         # Main content
         if run_button:
             try:
-                if 'username' not in st.session_state:
+                if not st.session_state.get('authenticated', False):
                     st.error("Please log in first")
                     st.stop()
                 logger.info(f"Processing request for user {st.session_state.username}, group: {taxonomic_group}")
