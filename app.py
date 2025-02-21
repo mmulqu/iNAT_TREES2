@@ -4,6 +4,11 @@ import os
 import time
 import requests
 from urllib.parse import urlparse, parse_qs
+import streamlit as st
+
+import os
+os.environ['STREAMLIT_SERVER_PORT'] = '8080'
+os.environ['STREAMLIT_SERVER_ADDRESS'] = '0.0.0.0'
 
 # Configure logging first
 logging.basicConfig(

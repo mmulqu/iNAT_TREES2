@@ -4,48 +4,16 @@ modules = ["python-3.11", "postgresql-16"]
 channel = "stable-24_05"
 
 [deployment]
-deploymentTarget = "autoscale"
-run = ["sh", "-c", "streamlit run app.py --server.address=0.0.0.0 --server.headless=true --server.enableCORS=false --server.enableWebsocketCompression=false --server.port=5000"]
+run = ["sh", "-c", "streamlit run app.py --server.address=0.0.0.0 --server.port=8080"]
+deploymentTarget = "cloudrun"
 
-[workflows]
-runButton = "Project"
+[languages]
+python = "3.11"
 
-[[workflows.workflow]]
-name = "Project"
-author = "agent"
-mode = "parallel"
+[env]
+PYTHONPATH = "${PYTHONPATH}:${workspaceDir}"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run app.py --server.address=0.0.0.0 --server.port=8502 --server.enableCORS=false --server.enableWebsocketCompression=false --server.headless=true"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Streamlit Server"
-
-[[workflows.workflow]]
-name = "Streamlit Server"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run app.py"
-waitForPort = 5000
-
+# Keep a single port configuration
 [[ports]]
-localPort = 5000
+localPort = 8080
 externalPort = 80
-
-[[ports]]
-localPort = 8501
-externalPort = 3000
-
-[[ports]]
-localPort = 8502
-externalPort = 3001
