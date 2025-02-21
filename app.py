@@ -61,8 +61,10 @@ try:
 
     # Handle OAuth callback
     code = st.query_params.get("code", None)
-    if code:
-        auth = INaturalistAuth()
+    if code and not st.session_state.get('auth_attempted'):
+    st.session_state.auth_attempted = True  # Prevent multiple attempts
+    auth = INaturalistAuth()
+    try:
         token_data = auth.exchange_code_for_token(code)
         if token_data:
             INaturalistAuth.store_token(token_data)
@@ -79,7 +81,12 @@ try:
             st.query_params.clear()
             st.rerun()
         else:
-            st.error("Failed to authenticate with iNaturalist. Please try again.")
+            st.error("Failed to authenticate")
+            st.query_params.clear()
+    except Exception as e:
+        logger.error(f"Auth error: {str(e)}")
+        st.error("Authentication failed")
+        st.query_params.clear()
 
     # Header
     st.markdown('<h1 class="main-header">iNaturalist Phylogenetic Tree Viewer 🌳</h1>', unsafe_allow_html=True)

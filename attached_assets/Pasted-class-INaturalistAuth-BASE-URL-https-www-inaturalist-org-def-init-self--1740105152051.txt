@@ -1,0 +1,103 @@
+class INaturalistAuth:
+    BASE_URL = "https://www.inaturalist.org"
+    
+    def __init__(self):
+        self.client_id = os.environ["INATURALIST_APP_ID"]
+        self.client_secret = os.environ["INATURALIST_APP_SECRET"]
+        self.redirect_uri = "https://inat-taxa-trees.replit.app/callback"
+
+    @staticmethod
+    def clear_session():
+        """Clear all authentication-related session data"""
+        keys_to_clear = [
+            'authenticated', 
+            'access_token', 
+            'username',
+            'observations',
+            'last_username',
+            'last_taxonomic_group'
+        ]
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+        logger.info("Cleared all authentication session data")
+
+    @staticmethod
+    def store_token(token_data: dict) -> None:
+        """Store the token data and user info in session state."""
+        # First clear any existing session data
+        INaturalistAuth.clear_session()
+        
+        # Store new token data
+        st.session_state.access_token = token_data.get("access_token")
+        st.session_state.token_expiry = time.time() + token_data.get("expires_in", 7200)
+        
+        # Fetch and store user info
+        try:
+            me_response = requests.get(
+                "https://api.inaturalist.org/v1/users/me",
+                headers={"Authorization": f"Bearer {token_data['access_token']}"}
+            )
+            if me_response.status_code == 200:
+                username = me_response.json()['results'][0]['login']
+                st.session_state.username = username
+                st.session_state.authenticated = True
+                logger.info(f"Successfully authenticated new user: {username}")
+            else:
+                logger.error(f"Failed to fetch user info: {me_response.status_code}")
+                INaturalistAuth.clear_session()
+        except Exception as e:
+            logger.error(f"Error fetching user info: {str(e)}")
+            INaturalistAuth.clear_session()
+
+    @staticmethod
+    def is_authenticated() -> bool:
+        """Check if the user is authenticated and token is valid."""
+        if not st.session_state.get("authenticated"):
+            return False
+            
+        # Check token expiration
+        current_time = time.time()
+        token_expiry = st.session_state.get("token_expiry", 0)
+        
+        if current_time > token_expiry:
+            logger.info("Token expired, clearing session")
+            INaturalistAuth.clear_session()
+            return False
+            
+        return True
+
+    @staticmethod
+    def logout() -> None:
+        """Clear the stored authentication data."""
+        logger.info(f"Logging out user: {st.session_state.get('username', 'Unknown')}")
+        INaturalistAuth.clear_session()
+
+    def exchange_code_for_token(self, code: str) -> dict:
+        """Exchange the authorization code for an access token."""
+        try:
+            # Clear any existing session data before requesting new token
+            INaturalistAuth.clear_session()
+            
+            payload = {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "code": code,
+                "redirect_uri": self.redirect_uri,
+                "grant_type": "authorization_code"
+            }
+            
+            response = requests.post(
+                f"{self.BASE_URL}/oauth/token",
+                data=payload
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            
+            logger.error(f"Token exchange failed with status {response.status_code}: {response.text}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error exchanging code for token: {str(e)}")
+            return None
