@@ -90,6 +90,9 @@ try:
         auth_url = INaturalistAuth.get_authorization_url()
         st.markdown(f'<a href="{auth_url}" target="_self"><button style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Login with iNaturalist</button></a>', unsafe_allow_html=True)
     else:
+        # Add this debug information
+        st.sidebar.text(f"Logged in as: {st.session_state.get('username', 'Unknown')}")
+        logger.info(f"Current user in session: {st.session_state.get('username')}")
         # Show logout button in sidebar
         with st.sidebar:
             if st.button("Logout"):

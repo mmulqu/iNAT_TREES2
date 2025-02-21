@@ -74,9 +74,24 @@ class INaturalistAuth:
 
     @staticmethod
     def store_token(token_data: dict) -> None:
-        """Store the token data in session state."""
+        """Store the token data and user info in session state."""
         st.session_state.access_token = token_data.get("access_token")
         st.session_state.authenticated = True
+        
+        # Fetch and store user info
+        try:
+            me_response = requests.get(
+                "https://api.inaturalist.org/v1/users/me",
+                headers={"Authorization": f"Bearer {token_data['access_token']}"}
+            )
+            if me_response.status_code == 200:
+                username = me_response.json()['results'][0]['login']
+                st.session_state.username = username
+                logger.info(f"Stored username in session state: {username}")
+            else:
+                logger.error(f"Failed to fetch user info: {me_response.status_code}")
+        except Exception as e:
+            logger.error(f"Error fetching user info: {str(e)}")
 
     @staticmethod
     def logout() -> None:
