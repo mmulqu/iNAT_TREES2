@@ -47,76 +47,76 @@ try:
         logger.error(f"Error loading CSS: {e}")
         st.warning("Custom styling could not be loaded, but the app will continue to function.")
 
-    # Initialize session state variables if not present
+    # Initialize session state variables
+    INaturalistAuth.init_auth_state()
     if 'observations' not in st.session_state:
         st.session_state.observations = None
     if 'last_username' not in st.session_state:
         st.session_state.last_username = ""
     if 'last_taxonomic_group' not in st.session_state:
         st.session_state.last_taxonomic_group = ""
-    if 'username' not in st.session_state:
-        st.session_state.username = None
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-
-    # Handle OAuth callback
-    code = st.query_params.get("code", None)
-    if code and not st.session_state.get('auth_attempted'):
-    st.session_state.auth_attempted = True  # Prevent multiple attempts
-    auth = INaturalistAuth()
-    try:
-        token_data = auth.exchange_code_for_token(code)
-        if token_data:
-            INaturalistAuth.store_token(token_data)
-            # Get username from iNaturalist
-            me_response = requests.get(
-                "https://api.inaturalist.org/v1/users/me",
-                headers={"Authorization": f"Bearer {token_data['access_token']}"}
-            )
-            if me_response.status_code == 200:
-                username = me_response.json()['results'][0]['login']
-                st.session_state.username = username
-                st.session_state.authenticated = True
-                st.success(f"Successfully authenticated as {username}!")
-            st.query_params.clear()
-            st.rerun()
-        else:
-            st.error("Failed to authenticate")
-            st.query_params.clear()
-    except Exception as e:
-        logger.error(f"Auth error: {str(e)}")
-        st.error("Authentication failed")
-        st.query_params.clear()
 
     # Header
     st.markdown('<h1 class="main-header">iNaturalist Phylogenetic Tree Viewer 🌳</h1>', unsafe_allow_html=True)
 
-    # Authentication status
+    # Authentication section
     if not INaturalistAuth.is_authenticated():
-        st.warning("Please authenticate with iNaturalist to access your observations.")
-        auth_url = INaturalistAuth.get_authorization_url()
-        st.markdown(f'<a href="{auth_url}" target="_self"><button style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Login with iNaturalist</button></a>', unsafe_allow_html=True)
+        st.warning("Please authenticate with your iNaturalist API token to continue.")
+        
+        with st.form("auth_form"):
+            api_token = st.text_input("Enter your iNaturalist API token:", type="password",
+                                    help="You can find your API token in your iNaturalist account settings")
+            submit_button = st.form_submit_button("Authenticate")
+            
+            if submit_button and api_token:
+                if INaturalistAuth.authenticate_with_token(api_token):
+                    st.success(f"Successfully authenticated as {st.session_state.username}!")
+                    st.rerun()
+                else:
+                    st.error("Invalid API token. Please check and try again.")
+        
+        st.markdown("""
+        ### How to get your API token:
+        1. Log in to your iNaturalist account
+        2. Go to Account Settings
+        3. Navigate to the "Developer" section
+        4. Find your API token or create a new one
+        """)
     else:
-        # Add this debug information
-        st.sidebar.text(f"Logged in as: {st.session_state.get('username', 'Unknown')}")
-        logger.info(f"Current user in session: {st.session_state.get('username')}")
-        # Show logout button in sidebar
+        # Add logout button in sidebar
         with st.sidebar:
+            st.text(f"Logged in as: {st.session_state.username}")
             if st.button("Logout"):
                 INaturalistAuth.logout()
-                st.experimental_rerun()
+                st.rerun()
 
-        # Sidebar
+        # Main interface
         with st.sidebar:
             st.markdown('<h2 class="subheader">Settings</h2>', unsafe_allow_html=True)
+            
+            # Username input
+            target_username = st.text_input(
+                "iNaturalist Username to analyze:",
+                value=st.session_state.get('target_username', st.session_state.username),
+                help="Enter any iNaturalist username to analyze their observations"
+            )
+            
+            # Store the target username in session state
+            if target_username != st.session_state.get('target_username'):
+                st.session_state.target_username = target_username
+                st.session_state.observations = None  # Clear cached observations
+            
             taxonomic_group = st.selectbox(
                 "Select Taxonomic Group",
-                ["All Groups", "Insects", "Fungi", "Plants", "Mammals", "Reptiles", "Amphibians", "Mollusks", "Birds", "Spiders", "Fish"]
+                ["All Groups", "Insects", "Fungi", "Plants", "Mammals", "Reptiles", 
+                 "Amphibians", "Mollusks", "Birds", "Spiders", "Fish"]
             )
+            
             run_button = st.button("Generate Tree")
+            
             st.markdown("""
             <div class="info-box">
-                Select a specific group of organisms or view all your observations.
+                Enter any iNaturalist username and select a group of organisms to visualize their observations.
             </div>
             """, unsafe_allow_html=True)
 
@@ -124,14 +124,21 @@ try:
         if run_button:
             try:
                 if not st.session_state.get('authenticated', False):
-                    st.error("Please log in first")
+                    st.error("Please authenticate first")
                     st.stop()
-                logger.info(f"Processing request for user {st.session_state.username}, group: {taxonomic_group}")
+                
+                if not st.session_state.target_username:
+                    st.error("Please enter a username to analyze")
+                    st.stop()
 
-                # Check if the group has changed from the previous request
-                if st.session_state.last_taxonomic_group != taxonomic_group:
+                logger.info(f"Processing request for target user {st.session_state.target_username}, group: {taxonomic_group}")
+
+                # Check if parameters have changed
+                if (st.session_state.last_username != st.session_state.target_username or 
+                    st.session_state.last_taxonomic_group != taxonomic_group):
                     logger.info("New parameters detected. Clearing cached observations.")
                     st.session_state.observations = None
+                    st.session_state.last_username = st.session_state.target_username
                     st.session_state.last_taxonomic_group = taxonomic_group
 
                 # Fetch observations if not already in session state
@@ -144,10 +151,10 @@ try:
                         "Loading observations... If only data traveled as fast as invasive species."
                     ]
                     with st.spinner(spinner_messages[0]):
-                        logger.info(f"Calling API with username: {st.session_state.username}")
+                        logger.info(f"Calling API for username: {st.session_state.target_username}")
                         api = INaturalistAPI()
                         st.session_state.observations = api.get_user_observations(
-                            username=st.session_state.username,
+                            username=st.session_state.target_username,
                             taxonomic_group=None if taxonomic_group == "All Groups" else taxonomic_group
                         )
 
@@ -157,7 +164,7 @@ try:
                 if not observations:
                     st.markdown("""
                     <div class="error-box">
-                        No observations found. Please try a different taxonomic group.
+                        No observations found. Please try a different taxonomic group or check the username.
                     </div>
                     """, unsafe_allow_html=True)
                 else:
