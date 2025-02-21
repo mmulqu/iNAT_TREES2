@@ -54,6 +54,10 @@ try:
         st.session_state.last_username = ""
     if 'last_taxonomic_group' not in st.session_state:
         st.session_state.last_taxonomic_group = ""
+    if 'username' not in st.session_state:
+        st.session_state.username = None
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
 
     # Handle OAuth callback
     code = st.query_params.get("code", None)
