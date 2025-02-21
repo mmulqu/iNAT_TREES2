@@ -110,7 +110,7 @@ try:
             try:
                 if 'username' not in st.session_state:
                     st.error("Please log in first")
-                    return
+                    st.stop()
                 logger.info(f"Processing request for user {st.session_state.username}, group: {taxonomic_group}")
 
                 # Check if the group has changed from the previous request
