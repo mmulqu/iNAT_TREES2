@@ -1,19 +1,30 @@
-modules = ["python-3.11", "postgresql-16"]
+# The primary programming language
+language = "python"
 
+# Entry point file
+entrypoint = "app.py"
+
+# Required modules/packages
+modules = ["python-3.11:v18-20230807-322e88b"]
+
+# Nix channel configuration
 [nix]
-channel = "stable-24_05"
+channel = "stable-23_11"
 
+# Deployment configuration
 [deployment]
-run = ["sh", "-c", "streamlit run app.py --server.address=0.0.0.0 --server.port=8080"]
+run = ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8080", "--server.headless=true"]
 deploymentTarget = "cloudrun"
 
-[languages]
-python = "3.11"
-
-[env]
-PYTHONPATH = "${PYTHONPATH}:${workspaceDir}"
-
-# Keep a single port configuration
+# Port configuration
 [[ports]]
 localPort = 8080
 externalPort = 80
+
+# Configure packager
+[packager]
+language = "python3"
+
+[packager.features]
+packageSearch = true
+guessImports = true
